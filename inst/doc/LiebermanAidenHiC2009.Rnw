@@ -1,0 +1,71 @@
+%\VignetteIndexEntry{Exploration of HiC data}}
+%\VignettePackage{LiebermanAidenHiC2009}
+
+% To compile this document
+% library('weaver'); rm(list=ls()); Sweave('LiebermanAidenHiC2009.Rnw', driver=weaver()); system('pdflatex LiebermanAidenHiC2009')
+
+\documentclass{article}
+
+\usepackage{Sweave}
+\usepackage[a4paper]{geometry}
+\usepackage{hyperref,graphicx}
+\usepackage{cite}
+\usepackage{color}
+\usepackage{url}
+\usepackage{listings}
+
+\SweaveOpts{keep.source=TRUE,eps=FALSE,include=FALSE,height=4.5,width=4} 
+\newcommand{\Robject}[1]{\texttt{#1}}
+\newcommand{\Rpackage}[1]{\textit{#1}}
+\newcommand{\Rclass}[1]{\textit{#1}}
+\newcommand{\Rfunction}[1]{{\small\texttt{#1}}}
+\newcommand{\fixme}[1]{{\textbf{Fixme:} \textit{\textcolor{blue}{#1}}}}
+
+\title{\textsf{\textbf{Exploration of HiC data}}}
+\author{Felix Klein}
+\begin{document}
+\maketitle
+\begin{abstract}
+Abstract
+\end{abstract}
+
+\tableofcontents
+
+%--------------------------------------------------
+\section{Obtaining the data}
+%--------------------------------------------------
+The data associaced with the article~\cite{LiebemanAiden2009} is available from NCBI Gene Expression Omnibus
+under the accession GSE18199. From this record, we downloaded the supplementary file GSE18199_RAW.tar and extracted
+\begin{lstlisting}
+$ wget ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/series/GSE18199/GSE18199_RAW.tar
+$ tar -xzvf GSE18199_RAW.tar 
+x GSM455133_30E0LAAXX.1.maq.hic.summary.binned.txt.gz
+x GSM455134_30E0LAAXX.2.maq.hic.summary.binned.txt.gz
+x GSM455135_30U85AAXX.2.maq.hic.summary.binned.txt.gz
+x GSM455136_30U85AAXX.3.maq.hic.summary.binned.txt.gz
+x GSM455137_30305AAXX.1.maq.hic.summary.binned.txt.gz
+x GSM455138_30305AAXX.2.maq.hic.summary.binned.txt.gz
+x GSM455139_428EGAAXX.7.maq.hic.summary.binned.txt.gz
+x GSM455140_428EGAAXX.8.maq.hic.summary.binned.txt.gz
+\end{lstlisting}
+
+%---------------------------------------------------------
+% SessionInfo
+%---------------------------------------------------------
+\begin{table*}[tbp]
+\begin{minipage}{\textwidth}
+<<sessionInfo, results=tex, print=TRUE>>=
+toLatex(sessionInfo())
+@ 
+\end{minipage}
+\caption{\label{tab:sessioninfo}%
+The output of \Rfunction{sessionInfo} on the build system 
+after running this vignette.}
+\end{table*}
+
+
+
+%--------------------------------------------------
+\bibliography{LiebermanAidenHiC2009}
+\bibliographystyle{plain}
+\end{document}
