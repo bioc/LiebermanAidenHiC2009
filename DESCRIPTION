@@ -4,9 +4,8 @@ Version: 0.1
 Author: Wolfgang Huber, Felix Klein
 Maintainer: Felix Klein <fklein@embl.de>
 Description: This package provides .... data that were presented in
-the article "Comprehensive mapping of long-range interactions reveals
-folding principles of the human genome", Science 2009 Oct
-9;326(5950):289-93. PMID: 19815776
+  the article "Comprehensive mapping of long-range interactions reveals
+  folding principles of the human genome", Science 2009 Oct 9;326(5950):289-93. PMID: 19815776
 biocViews: ExperimentData
 License: LGPL
 Depends: 

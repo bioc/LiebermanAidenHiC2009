@@ -35,7 +35,7 @@ Abstract
 \section{Obtaining the data}
 %--------------------------------------------------
 The data associaced with the article~\cite{LiebemanAiden2009} is available from NCBI Gene Expression Omnibus
-under the accession GSE18199. From this record, we downloaded the supplementary file GSE18199_RAW.tar and extracted
+under the accession GSE18199. From this record, we downloaded the supplementary file GSE18199\_RAW.tar and extracted
 \begin{lstlisting}
 $ wget ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/series/GSE18199/GSE18199_RAW.tar
 $ tar -xzvf GSE18199_RAW.tar 
@@ -48,6 +48,46 @@ x GSM455138_30305AAXX.2.maq.hic.summary.binned.txt.gz
 x GSM455139_428EGAAXX.7.maq.hic.summary.binned.txt.gz
 x GSM455140_428EGAAXX.8.maq.hic.summary.binned.txt.gz
 \end{lstlisting}
+
+From these, we selected six files, GSM455133 \ldots GSM455138, because \fixme{explain}.
+The format of these files is explained in the file \texttt{GSE18199\_readme\_v4.txt}, which we provide 
+in the \texttt{extdata} directory of the package.
+
+Briefly, each line corresponds to one paired end alignment.
+Each line has 9 entries:
+\begin{center}
+\texttt{read name, chromosome1, position1, strand1, restrictionfragment1, chromosome2, position2, strand2, restrictionfragment2}
+\end{center}
+Of these,  the four with last character "1" correspond to the first paired end, and the four with last character "2" to the second paired end. \texttt{position} is position in base pairs where the alignment starts. The alignments are based on the hg18 assembly of the human genome.
+
+Altogether, these files encompass ca.~X Mio lines
+
+We used \texttt{sed} \fixme{or whatever you prefer} to
+% e.g.
+<<readtable, eval=FALSE>>=
+r = read.table(gzfile("GSM455133_30E0LAAXX.1.maq.hic.summary.binned.txt.gz"), header=FALSE, sep="\t")
+colnames(r) = c("read name", "chromosome1", "position1", "strand1", "restrictionfragment1", 
+                             "chromosome2", "position2", "strand2", "restrictionfragment2")
+rs = subset(r, chromosome1==14L | chromosome2==14L) 
+@ 
+select only those read pairs for which at least one end aligned to chromosome 14.
+
+
+Felix, in order fill a matrix with such a datatructure, you can perhaps use the matrix-method for the "[" operator,
+such as 
+<<fillmatrix, eval=FALSE>>=
+m = matrix(NA_integer_, nrow=n, ncol=n)
+
+## 1. bin the positions
+
+## 2. do something that makes the rows in rs unique with respect to (positioon1, position2),
+##   and let 'multiplicity' count their multiplicty  
+
+m[ cbind(rs$position1, rs$position2) ] = rs$multiplicity
+@ 
+
+Perhaps \Rfunction{kde2d} would also be an option!
+
 
 %---------------------------------------------------------
 % SessionInfo
