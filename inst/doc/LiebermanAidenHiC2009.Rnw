@@ -55,7 +55,7 @@ The data associated with the article~\cite{LiebermanAiden2009} is available from
 under the accession GSE18199. From this record, we downloaded the supplementary file GSE18199\_RAW.tar and extracted
 \begin{lstlisting}
 $ wget ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/series/GSE18199/GSE18199_RAW.tar
-$ tar -xzvf GSE18199_RAW.tar  
+$ tar -xvf GSE18199_RAW.tar  
 \end{lstlisting}
 
 From these, we selected six files, GSM455133 \ldots GSM455138. They
@@ -99,7 +99,7 @@ is provided in the package.
 % , eval=FALSE>>=
 <<readtable>>=  
 inputDir = system.file("extdata", package="LiebermannAidenHiC2009.Rnw")
-inputDir = "/g/huber/course"
+inputDir = "/g/huber/course/LiebermanAidenHiC"
 df = vector(mode="list", length=nrow(sampleAnnotation))
 for(i in seq(along=df)) {
   cat("Reading file", i, "\n")
@@ -112,7 +112,7 @@ for(i in seq(along=df)) {
 }
 HiC_GM_chr14 = do.call(rbind, df)
 save(HiC_GM_chr14,
-     file.path("..", "extdata", "HiC_GM_chr14.RData"))
+     file=file.path("..", "extdata", "HiC_GM_chr14.RData"))
 @ 
 \fixme{Move the files into the package, rather than /g/huber/course}
   
