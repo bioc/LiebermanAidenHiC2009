@@ -49,16 +49,17 @@
 \tableofcontents
 
 %--------------------------------------------------
-\section{Obtaining the data}
+\section{Obtaining the data}\label{sec:obtain}
 %--------------------------------------------------
 The data associated with the article~\cite{LiebermanAiden2009} is available from NCBI Gene Expression Omnibus
 under the accession GSE18199. From this record, we downloaded the supplementary file GSE18199\_RAW.tar and extracted
+its content.
 \begin{lstlisting}
 $ wget ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/series/GSE18199/GSE18199_RAW.tar
 $ tar -xvf GSE18199_RAW.tar  
 \end{lstlisting}
 
-From these, we selected six files, GSM455133 \ldots GSM455138. They
+From the resulting set of files, we selected six files, whose names are given in the following code chunk. They
 contain HiC data for the GM06990 cell line from three experiments (two
 replicates with the restriction enzyme HindIII and one with NcoI). 
 The sample information is summarized in the following table.
@@ -91,13 +92,12 @@ Each line has 9 entries:
 \end{center}
 Of these,  the four with last character "1" correspond to the first paired end, and the four with last character "2" to the second paired end. \texttt{position} is position in base pairs where the alignment starts. The alignments are based on the hg18 assembly of the human genome.
 
-Altogether, these files encompass ca.~8.4 Mio lines. Here we will only focus on chromosome 14.
-
-We used the following code to select only those lines that correspond to read pairs for 
-which both ends aligned to chromosome 14, and to create the dataframe \Robject{HiC_GM_chr14}, which
+Altogether, these files encompass ca.~8.4 Mio lines. Here, we only focus on chromosome 14.
+To prepare the data for this lab, we used the following code to select only those lines that correspond to read pairs for 
+which both ends aligned to chromosome 14, and to create the dataframe \Robject{HiC\_GM\_chr14}, which
 is provided in the package. 
-% , eval=FALSE>>=
-<<readtable>>=  
+% 
+<<readtable, eval=FALSE>>=  
 inputDir = system.file("extdata", package="LiebermannAidenHiC2009.Rnw")
 inputDir = "/g/huber/course/LiebermanAidenHiC"
 df = vector(mode="list", length=nrow(sampleAnnotation))
@@ -119,18 +119,23 @@ save(HiC_GM_chr14,
 %---------------------------------------------------------
 \section{The adjacency matrix for chromosome 14}
 %---------------------------------------------------------
-We load the data and look at the scatterplot for start and end positions (Figure~\ref{figscatter}).
+We load the data and look at the scatterplot for start and end positions (Figure~\ref{figscatter.png}).
 
 <<data>>=
-# data("HiC_GM_chr14_all.RData")    # can use this once the data set is in the package
-load(file.path("..", "extdata", "HiC_GM_chr14_all.RData"))
+# data("HiC_GM_chr14.RData")    # can use this once the data set is in the package
+load(file.path("..", "extdata", "HiC_GM_chr14.RData"))
 pos = with(HiC_GM_chr14, cbind(position1, position2))
 @ 
-<<figscatter,fig=TRUE>>=
-plot(pos,pch='.')
+<<figscatter1,eval=FALSE>>=
+plot(pos, pch='.', col="#77777777")
+@
+<<figscatter2>>=
+png("figscatter.png",width=1024,height=1024)
+plot(pos, pch='.', col="#77777777")
+dev.off()
 @
 
-\incfig{figscatter}{0.5\textwidth}{%
+\myfig{figscatter.png}{0.75\textwidth}{%
 Scatterplot of positions 1 and 2 for the HiC read pairs for which both ends map to chromosome 14.
 }
 
@@ -151,17 +156,17 @@ den$fhat <- den$fhat + t(den$fhat)
 
 Let us use the \Rfunction{image} function to visualise the interaction matrix in false color representation.
 %
-<<figmatrix,fig=TRUE,width=7,height=7>>=
+<<figmatrix1,fig=TRUE,width=7,height=7>>=
 with(den, image(x=x1, y=x2, z=fhat^0.3, 
       col=colorRampPalette(c("white","blue"))(256), useRaster=TRUE))
 @ 
-The result is shown in Figure~\ref{figmatrix}.
+The result is shown in Figure~\ref{figmatrix1}.
 \begin{itemize}
-\item What is the point of the exponentiation (\Robject{^0.3})? What happens if you do not do it, or use another 
+\item What is the point of the exponentiation $(\wedge 0.3)$? What happens if you do not do it, or use another 
 function?
 \end{itemize}
 
-\myfig{figmatrix}{0.75\textwidth}{%
+\myfig{figmatrix1}{0.75\textwidth}{%
   Adjacency matrix obtained from smoothing the positions of paired read alignments.
   Compare this to Figure\fixme{?} in the paper~\cite{LiebermanAiden2009}.}
 
@@ -177,45 +182,76 @@ m = m + t(m)
 diag(m) = mean(diag(den$fhat))
 @
 
-With the calculated matrix of average interactions we can normalize our data by deviding the two matrices and plot the result.
-
-<<normalize2, eval=FALSE>>=
+With the calculated matrix of average interactions we can normalize our data by dividing the two matrices 
+and plot the result (Figure~\ref{figmatrix2}).
+%
+<<normalize, cache=TRUE>>=
 normDen <- den
 normDen$fhat <- normDen$fhat/m
-
-with(normDen, image(x=x1,y=x2,z=fhat, col=colorRampPalette(c("white","blue"))(256), useRaster=TRUE))
+@ 
+<<figmatrix2,fig=TRUE,width=7,height=7>>=
+with(normDen, image(x=x1, y=x2, z=fhat, 
+      col=colorRampPalette(c("white","blue"))(256), useRaster=TRUE))
 @
 
-Now the plaid pattern is more pronounced than before. However it can still be improved by caluclating the correlation matrix, where the entry (i,j) is the correlation of the of the rowvector i with coloumvector j. Using a third color in the plot, we can see that the chromosome basically splits into 2 compartments.
+\myfig{figmatrix2}{0.75\textwidth}{%
+  After normalisation by the expected number of read pairs.}
 
-<<cormatrix, eval=FALSE>>=
+Now the plaid pattern is more pronounced than before. Another view on the data
+is provided by caluclating the correlation matrix, where the entry $(i,j)$ is the correlation 
+of the of the row $i$ with row $j$. 
+Using a third color in the plot, we can see that the chromosome basically splits into 2 compartments.
+
+<<cormatrix, cache=TRUE>>=
 cm <- cor(normDen$fhat)
-
 corDen <- normDen
 corDen$fhat <- cm
+@ 
 
-with(corDen, image(x=x1,y=x2,z=fhat, col=colorRampPalette(c("red", "white","blue"))(256), useRaster=TRUE))
+<<figmatrix3,fig=TRUE,width=7,height=7>>=
+with(corDen, image(x=x1,y=x2,z=fhat, 
+     zlim=c(-1,1),
+     col=colorRampPalette(c("red", "white","blue"))(256), useRaster=TRUE))
 @
 
-As next step we perform a principal component analysis on the matrix and retrieve the first two eigenvectors. Because we want to compare these vectors to chip-seq experiments of histone modifications and DNAse1 sensitivity, we use run-length encoding (rle) to store the vectors. \fixme{Efficient way of storing data that is constant over long ranges.}  
+The result is shown in Figure~\ref{figmatrix3}.
 
-<<cormatrix, eval=FALSE>>=
+\myfig{figmatrix3}{0.75\textwidth}{%
+  Correlation matrix.}
+
+As next step we perform a principal component analysis on the matrix and retrieve the first two eigenvectors. Because we want to compare these vectors to ChIP-seq experiments of histone modifications and DNAse1 sensitivity, we use run-length encoding (\Rclass{Rle}) to store the vectors. \fixme{Explain \Rclass{Rle} - it is an efficient way of long sequences that have long constant runs.}  
+
+<<cormatrix, cache=TRUE>>=
 princp = princomp(corDen$fhat)
+@ 
+<<figprcomp1, fig=TRUE,width=8>>=
 plot(princp$loadings[,1])
+@ 
+See Figure~\ref{figprcomp1}.
+\myfig{figprcomp1}{0.8\textwidth}{%
+  \Robject{princp\$loadings[,1]}.}
 
+<<pc1Vec>>=
 pc1Vec = Rle(values  = princp$loadings[,1],
              lengths = c(normDen$x1[1], diff(normDen$x1)))
 pc2Vec = Rle(values  = princp$loadings[,2],
              lengths = c(normDen$x1[1], diff(normDen$x1)))
 @
 
-To compare with the chip-seq data we have to load the files and store them as rle vectors. The data files contain the the following information about chip-seq peaks:
+%---------------------------------------------------------
+\section{Comparison with chromatin state data}
+%---------------------------------------------------------
+
+To compare with the ChIP-seq data, we load the files and store them as \Rclass{Rle} vectors. 
+The data files contain the the following information about ChIP-seq peaks:
 \begin{center}
 \texttt{chromosome, start position, end position, name, score, strand, signal value, pValue, qValue}
 \end{center}
-We are only interesstend in data of chromosome 14 and want the start position, end position and the signal value in this range. To create the rle vectors we use the following function.
-
-<<readchipseq, eval=FALSE>>=
+We are only interested in data for chromosome 14. For each peak, we want the start position, end position and the signal value in this range. 
+To read the data, we use the following function.
+%
+<<readchipseq, results=hide>>=
+library("IRanges")
 createRleVector = function(file){
   tab = read.table(gzfile(file), header=FALSE, sep="\t", comment.char = "", stringsAsFactors=FALSE)
   colnames(tab) <- c("chr", "start", "end", "name", "score", "strand", "signalValue", "pValue", "qValue")
@@ -224,66 +260,79 @@ createRleVector = function(file){
   RleVec = Rle(0, max(tab$end))
   for(i in 1:nrow(tab)){
     RleVec = RleVec + 
-                  Rle(values  = c(0, tab$signalValue[i], 0),
-                    lengths = c( tab$start[i]-1, tab$end[i]-tab$start[i]+1,   length(RleVec)-tab$end[i]))
+      Rle(values  = c(0,              tab$signalValue[i],         0),
+          lengths = c(tab$start[i]-1, tab$end[i]-tab$start[i]+1,  length(RleVec)-tab$end[i]))
   }
-    
   RleVec
 }
+@ 
 
-files = paste("/g/huber/course", c("wgEncodeBroadHistoneGm12878H3k27me3StdPk.broadPeak.gz", 
-                                    "wgEncodeBroadHistoneGm12878H3k36me3StdPk.broadPeak.gz",
-                                    "wgEncodeUwDnaseGm06990HotspotsRep1.broadPeak.gz",
-                                    "wgEncodeUwDnaseGm06990HotspotsRep2.broadPeak.gz"), sep="/")
-
+These are the data files \fixme{Move this file import to Section~\ref{sec:obtain}, explain where you found these files (URL),
+        what they contain. Here, we can just load them using \Rfunction{data}.}
+<<ChIPfiles>>=
+inDir = "/g/huber/course"
+inDir = "/Users/huber/LiebermanAiden"
+files = file.path(inDir, 
+  c("wgEncodeBroadHistoneGm12878H3k27me3StdPk.broadPeak.gz", 
+    "wgEncodeBroadHistoneGm12878H3k36me3StdPk.broadPeak.gz",
+    "wgEncodeUwDnaseGm06990HotspotsRep1.broadPeak.gz",
+    "wgEncodeUwDnaseGm06990HotspotsRep2.broadPeak.gz"))
+@ 
+<<read,cache=TRUE>>=
 H3k27me3 = createRleVector(files[1])
 H3k36me3 = createRleVector(files[2])
-
-Dnase1 = createRleVector(files[3])
-Dnase2 = createRleVector(files[4])
+Dnase1   = createRleVector(files[3])
+Dnase2   = createRleVector(files[4])
 @
 
 To combine the two DNAse1 replicates we have to make sure that the vectors have the same length. 
 
-<<combinednase, eval=FALSE>>=
+<<combinednase>>=
 length(Dnase1)
 length(Dnase2)
-
 Dnase = Dnase1[seq(along=Dnase2)] + Dnase2
 @
 
-For plotting the first Eigenvector against the chip-seq data, we have to make sure that we use the same scale for all plots. Therefore we define a plotting function that covers the same genomic range by setting a fixed xlim. We also want to plot them on top of each other in one plot and do this by setting par accordingly.
+For plotting the first eigenvector against the ChIP-seq data, we have to make sure that we use the same scale for all plots. Therefore we define a plotting function that covers the same genomic range by setting a fixed $x$-axis range \Robject{xlim}. We also want to plot them on top of each other in one plot and do this by setting \Robject{par} accordingly.
 
-<<plotvectors, eval=FALSE>>=
+<<plotRle>>=
 plotRle = function(RleVector, ...){
-  plot(end(RleVector), runValue(RleVector)+1, type="h", log="y", xlim = c(1.5e+7, 107000000), ...)
+  plot(end(RleVector), runValue(RleVector)+1, type="h", log="y", 
+       xlim = c(1.5e+7, 107000000), xlab="", ylab=deparse(substitute(RleVector)), ...)
 }
 
-par(mfrow=c(4,1))
-
+<<figrle,fig=TRUE,width=7,height=8>>=
+par(mfrow=c(4,1), mai=c(0.5,0.7,0.1,0.1))
 plotRle(pc1Vec)
 plotRle(H3k27me3)
 plotRle(H3k36me3)
 plotRle(Dnase1)
 @
 
-From looking at the plots the data seems to correlate quite good. However to quantify this we have to calculate the correlation of the vectors. To do this we have to make sure that they are of the same length.
+\myfig{figrle}{0.9\textwidth}{%
+  Plots of \Robject{pc1Vec}, \Robject{H3k27me3}, \Robject{H3k36me3},
+  \Robject{Dnase1}.}
 
-<<correlation, eval=FALSE>>=
-length(H3k27me3)
-length(H3k36me3)
-length(Dnase)
-length(pc1Vec)
+From looking at the plots the data seem to correlate quite well. However, to 
+assess this more quantitatively, let us calculate the correlation of the vectors. 
+To do this we need to make sure that they are of the same length.
 
-x <- seq(along=H3k36me3)
+<<correlation>>=
+c(length(H3k27me3),
+  length(H3k36me3),
+  length(Dnase),
+  length(pc1Vec))
+
+x = seq(along=H3k36me3)
 
 cor(H3k27me3[x], pc1Vec[x])
 cor(H3k36me3, pc1Vec[x])
 cor(Dnase[x], pc1Vec[x])
 @
 
-As you the the correlation coefficents are less convincing as the visual impression, especially for the DNAse1. 
-If you have time left, you can dicuss this topic or repeat the last steps for the second eigenvector of the principal component analysis.
+As you see, the correlation coefficents are less convincing than the visual impression, especially for DNAse1. 
+Discuss this topic. Repeat the last steps for the second eigenvector of the principal component analysis.
+Which other analyses could one do now?
 
 %---------------------------------------------------------
 % SessionInfo
