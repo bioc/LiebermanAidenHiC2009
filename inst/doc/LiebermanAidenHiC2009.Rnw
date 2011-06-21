@@ -54,10 +54,8 @@
 The data associated with the article~\cite{LiebermanAiden2009} is available from NCBI Gene Expression Omnibus
 under the accession GSE18199. From this record, we downloaded the supplementary file GSE18199\_RAW.tar and extracted
 \begin{lstlisting}
-$ wget ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/\
-      series/GSE18199/GSE18199_RAW.tar
+$ wget ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/series/GSE18199/GSE18199_RAW.tar
 $ tar -xzvf GSE18199_RAW.tar  
-$ gunzip GSM455*txt.gz
 \end{lstlisting}
 
 From these, we selected six files, GSM455133 \ldots GSM455138. They
@@ -68,12 +66,12 @@ The sample information is summarized in the following table.
 <<pData>>=
 sampleAnnotation = 
   data.frame(
-    file = c("GSM455133_30E0LAAXX.1.maq.hic.summary.binned.txt",
-             "GSM455134_30E0LAAXX.2.maq.hic.summary.binned.txt",
-             "GSM455135_30U85AAXX.2.maq.hic.summary.binned.txt",
-             "GSM455136_30U85AAXX.3.maq.hic.summary.binned.txt",
-             "GSM455137_30305AAXX.1.maq.hic.summary.binned.txt",
-             "GSM455138_30305AAXX.2.maq.hic.summary.binned.txt"),
+    file = c("GSM455133_30E0LAAXX.1.maq.hic.summary.binned.txt.gz",
+             "GSM455134_30E0LAAXX.2.maq.hic.summary.binned.txt.gz",
+             "GSM455135_30U85AAXX.2.maq.hic.summary.binned.txt.gz",
+             "GSM455136_30U85AAXX.3.maq.hic.summary.binned.txt.gz",
+             "GSM455137_30305AAXX.1.maq.hic.summary.binned.txt.gz",
+             "GSM455138_30305AAXX.2.maq.hic.summary.binned.txt.gz"),
     restrictionenzyme = c("HindIII", "HindIII", "HindIII", "HindIII",
                           "NcoI", "NcoI"),
     replicate = c(1,2,1,2,1,2),
@@ -102,11 +100,10 @@ is provided in the package.
 <<readtable>>=  
 inputDir = system.file("extdata", package="LiebermannAidenHiC2009.Rnw")
 inputDir = "/g/huber/course"
-inputDir = "/Users/huber/LiebermanAiden"
 df = vector(mode="list", length=nrow(sampleAnnotation))
 for(i in seq(along=df)) {
   cat("Reading file", i, "\n")
-  r = read.table(file.path(inputDir, sampleAnnotation$file[i]), 
+  r = read.table(gzfile(file.path(inputDir, sampleAnnotation$file[i])), 
            header=FALSE, sep="\t", comment.char = "", stringsAsFactors=FALSE)
   colnames(r) = c("read name",
      "chromosome1", "position1", "strand1", "restrictionfragment1",
