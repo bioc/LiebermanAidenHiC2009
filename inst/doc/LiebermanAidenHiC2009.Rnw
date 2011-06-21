@@ -20,7 +20,6 @@
 \newcommand{\Rpackage}[1]{\textit{#1}}
 \newcommand{\Rclass}[1]{\textit{#1}}
 \newcommand{\Rfunction}[1]{{\small\texttt{#1}}}
-\newcommand{\fixme}[1]{{\textbf{Fixme:} \textit{\textcolor{blue}{#1}}}}
 
 \newcommand{\fixme}[1]{{\textbf{Fixme:} \textit{\textcolor{blue}{#1}}}}
 \newcommand{\myfig}[3]{%
@@ -34,11 +33,17 @@
 \renewcommand{\floatpagefraction}{0.9}	
 
 \title{\textsf{\textbf{Exploration of HiC data}}}
-\author{Felix Klein}
+\author{Felix Klein, Wolfgang Huber}
 \begin{document}
 \maketitle
 \begin{abstract}
-Abstract
+\begin{enumerate}
+\item Why is it important?
+\item What is the problem?
+\item What do we here do about it?
+\item What will you learn?
+\item What is the wider implication?
+\end{enumerate}
 \end{abstract}
 
 \tableofcontents
@@ -46,25 +51,41 @@ Abstract
 %--------------------------------------------------
 \section{Obtaining the data}
 %--------------------------------------------------
-The data associaced with the article~\cite{LiebemanAiden2009} is available from NCBI Gene Expression Omnibus
+The data associated with the article~\cite{LiebermanAiden2009} is available from NCBI Gene Expression Omnibus
 under the accession GSE18199. From this record, we downloaded the supplementary file GSE18199\_RAW.tar and extracted
 \begin{lstlisting}
-$ wget ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/series/GSE18199/GSE18199_RAW.tar
-$ tar -xzvf GSE18199_RAW.tar 
-x GSM455133_30E0LAAXX.1.maq.hic.summary.binned.txt.gz
-x GSM455134_30E0LAAXX.2.maq.hic.summary.binned.txt.gz
-x GSM455135_30U85AAXX.2.maq.hic.summary.binned.txt.gz
-x GSM455136_30U85AAXX.3.maq.hic.summary.binned.txt.gz
-x GSM455137_30305AAXX.1.maq.hic.summary.binned.txt.gz
-x GSM455138_30305AAXX.2.maq.hic.summary.binned.txt.gz
-x GSM455139_428EGAAXX.7.maq.hic.summary.binned.txt.gz
-x GSM455140_428EGAAXX.8.maq.hic.summary.binned.txt.gz
+$ wget ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/\
+      series/GSE18199/GSE18199_RAW.tar
+$ tar -xzvf GSE18199_RAW.tar  
+$ gunzip GSM455*txt.gz
 \end{lstlisting}
 
-From these, we selected six files, GSM455133 \ldots GSM45513. They contain HiC data for the GM06990 cell line from three experiments (two replicates with the restriction enzyme HindIII and one with NcoI).  
-The format of these files is explained in the file \texttt{GSE18199\_readme\_v4.txt}, which we provide 
-in the \texttt{extdata} directory of the package.
+From these, we selected six files, GSM455133 \ldots GSM455138. They
+contain HiC data for the GM06990 cell line from three experiments (two
+replicates with the restriction enzyme HindIII and one with NcoI). 
+The sample information is summarized in the following table.
 
+<<pData>>=
+sampleAnnotation = 
+  data.frame(
+    file = c("GSM455133_30E0LAAXX.1.maq.hic.summary.binned.txt",
+             "GSM455134_30E0LAAXX.2.maq.hic.summary.binned.txt",
+             "GSM455135_30U85AAXX.2.maq.hic.summary.binned.txt",
+             "GSM455136_30U85AAXX.3.maq.hic.summary.binned.txt",
+             "GSM455137_30305AAXX.1.maq.hic.summary.binned.txt",
+             "GSM455138_30305AAXX.2.maq.hic.summary.binned.txt"),
+    restrictionenzyme = c("HindIII", "HindIII", "HindIII", "HindIII",
+                          "NcoI", "NcoI"),
+    replicate = c(1,2,1,2,1,2),
+    otherFactor = rep(NA, 6),
+    stringsAsFactors = FALSE)
+@ 
+\fixme{Fix the table: currently, column \Robject{restrictionenzyme} is wrong/random,
+       and add any other pertinent sample information.}
+
+The format of these files is explained in the file
+\texttt{GSE18199\_readme\_v4.txt}, which we provide in the
+\texttt{extdata} directory of the package.
 Briefly, each line corresponds to one paired end alignment.
 Each line has 9 entries:
 \begin{center}
@@ -74,70 +95,89 @@ Of these,  the four with last character "1" correspond to the first paired end, 
 
 Altogether, these files encompass ca.~8.4 Mio lines. Here we will only focus on chromosome 14.
 
-We used \texttt{sed} the following code to selected only those read pairs for which at least one end aligned to chromosome 14. 
-% e.g.
-<<readtable, eval=FALSE>>=
-##  this should be a vector of all 6 filenames
-files = c("GSM455133_30E0LAAXX.1.maq.hic.summary.binned.txt.gz")
-
-df = vector(mode="list", length=length(files))
-for(i in seq(along=files)) {
-  r = read.table(gzfile(files[i]), header=FALSE, sep="\t", comment.char = "", stringsAsFactors=FALSE)
+We used the following code to select only those lines that correspond to read pairs for 
+which both ends aligned to chromosome 14, and to create the dataframe \Robject{HiC_GM_chr14}, which
+is provided in the package. 
+% , eval=FALSE>>=
+<<readtable>>=  
+inputDir = system.file("extdata", package="LiebermannAidenHiC2009.Rnw")
+inputDir = "/g/huber/course"
+inputDir = "/Users/huber/LiebermanAiden"
+df = vector(mode="list", length=nrow(sampleAnnotation))
+for(i in seq(along=df)) {
+  cat("Reading file", i, "\n")
+  r = read.table(file.path(inputDir, sampleAnnotation$file[i]), 
+           header=FALSE, sep="\t", comment.char = "", stringsAsFactors=FALSE)
   colnames(r) = c("read name",
      "chromosome1", "position1", "strand1", "restrictionfragment1",
      "chromosome2", "position2", "strand2", "restrictionfragment2")
-  df[[i]] = subset(r, chromosome1==14L | chromosome2==14L)
-  cat("Done", i, "\n")
+  df[[i]] = subset(r, (chromosome1==14L) & (chromosome2==14L))
 }
-
-dfc = do.call(rbind, df)
-  
-write.table(dfc, file = "HiC_GM_chr14_all", quote = FALSE, sep = "\t", row.names=FALSE)
+HiC_GM_chr14 = do.call(rbind, df)
+save(HiC_GM_chr14,
+     file.path("..", "extdata", "HiC_GM_chr14.RData"))
 @ 
+\fixme{Move the files into the package, rather than /g/huber/course}
+  
+%---------------------------------------------------------
+\section{The adjacency matrix for chromosome 14}
+%---------------------------------------------------------
+We load the data and look at the scatterplot for start and end positions (Figure~\ref{figscatter}).
 
-Your task is now to load this file and look at the intrachromosomal interaction of chromosome 14. In oder to do this you need to filter for reads, where both ends mapped to chromosome 14. To have a look at the data plot position1 against position 2.
-
-<<readdata, eval=FALSE>>=
-dfc=read.table("/g/huber/course/HiC_GM_chr14_all", header=TRUE, sep="\t", comment.char = "", stringsAsFactors=FALSE) 
-
-rs = subset(dfc, chromosome1==14L & chromosome2==14L)
-
+<<data>>=
+# data("HiC_GM_chr14_all.RData")    # can use this once the data set is in the package
+load(file.path("..", "extdata", "HiC_GM_chr14_all.RData"))
+pos = with(HiC_GM_chr14, cbind(position1, position2))
+@ 
+<<figscatter,fig=TRUE>>=
 plot(pos,pch='.')
 @
 
-We now will smooth the interaction matrix. As you can see the matrix looks pretty symmetric. To make it symmetric we add the transpose to the smoothed matrix and plot it. 
+\incfig{figscatter}{0.5\textwidth}{%
+Scatterplot of positions 1 and 2 for the HiC read pairs for which both ends map to chromosome 14.
+}
 
-<<smooth, eval=FALSE>>=
+To create a matrix of intrachromosomal locus--locus interaction frequencies, let us smooth the data.
 
+<<smooth, cache=TRUE, results=hide>>=
 library("KernSmooth")
 chrlen = max(pos)
 gridsize = ceiling(chrlen/3e5)
 den = bkde2D( pos, bandwidth=c(1,1)*3e5, gridsize=c(1,1)*gridsize)
+@ 
 
+Since the the labeling of the reads within a pair as 1 or 2 is arbitrary, and since 
+pairwise interaction is a symmetric concept, we symmetrize the matrix.
+<<symm, cache=TRUE>>=
 den$fhat <- den$fhat + t(den$fhat)
-
-with(den, image(x=x1,y=x2,z=fhat^.3, col=colorRampPalette(c("white","blue"))(256), useRaster=TRUE))
 @ 
 
-<<figmatrix,fig=TRUE,width=7,height=7, eval = FALSE>>=
-with(den, image(x=x1,y=x2,z=fhat^.3, col=colorRampPalette(c("white","blue"))(256), useRaster=TRUE))
+Let us use the \Rfunction{image} function to visualise the interaction matrix in false color representation.
+%
+<<figmatrix,fig=TRUE,width=7,height=7>>=
+with(den, image(x=x1, y=x2, z=fhat^0.3, 
+      col=colorRampPalette(c("white","blue"))(256), useRaster=TRUE))
 @ 
+The result is shown in Figure~\ref{figmatrix}.
+\begin{itemize}
+\item What is the point of the exponentiation (\Robject{^0.3})? What happens if you do not do it, or use another 
+function?
+\end{itemize}
 
-\myincfig{figmatrix}{0.7\textwidth}{Adjacency matrix obtained from smoothing the positions of paired read alignments.}
+\myfig{figmatrix}{0.75\textwidth}{%
+  Adjacency matrix obtained from smoothing the positions of paired read alignments.
+  Compare this to Figure\fixme{?} in the paper~\cite{LiebermanAiden2009}.}
 
-The diagonal is strongly pronounced because the contact probability higher for smaller genomic distances. To normalize for this we calculate the mean number of interactions at a given genomic distance. This is done by calculating a matrix with the mean counts on the diagonal and the secondary diagonals. First we do this for the secondary diagonals and make the matrix symmetric. After this we add the diagonal.  
+The diagonal is strongly pronounced because the contact frequency is highest for small genomic distances. To normalize for this, and focus on the (possibly interesting) deviations from this general relationship, we calculate the mean number of interactions at a given genomic distance. First we do this for the secondary diagonals and make the matrix symmetric. After this we add the diagonal.  
 
-<<normalize, eval=FALSE>>=
-
+<<normalize, cache=TRUE>>=
 m = matrix(0, nrow=gridsize, ncol=gridsize)
-for(i in 1:gridsize){
-  off.diag <-  row(m)==col(m)+i
-  m[off.diag] <- mean(den$fhat[off.diag])
+for(i in 1:(gridsize-1)) {
+  band = (row(m)==col(m)+i)
+  m[band] = mean(den$fhat[band])
 }
-m <- m + t(m)
-
+m = m + t(m)
 diag(m) = mean(diag(den$fhat))
-
 @
 
 With the calculated matrix of average interactions we can normalize our data by deviding the two matrices and plot the result.
