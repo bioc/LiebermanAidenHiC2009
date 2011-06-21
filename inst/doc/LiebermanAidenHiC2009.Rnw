@@ -61,7 +61,7 @@ x GSM455139_428EGAAXX.7.maq.hic.summary.binned.txt.gz
 x GSM455140_428EGAAXX.8.maq.hic.summary.binned.txt.gz
 \end{lstlisting}
 
-From these, we selected six files, GSM455133 \ldots GSM455138, because \fixme{explain}.
+From these, we selected six files, GSM455133 \ldots GSM45513. They contain HiC data for the GM06990 cell line from three experiments (two replicates with the restriction enzyme HindIII and one with NcoI).  
 The format of these files is explained in the file \texttt{GSE18199\_readme\_v4.txt}, which we provide 
 in the \texttt{extdata} directory of the package.
 
@@ -72,47 +72,181 @@ Each line has 9 entries:
 \end{center}
 Of these,  the four with last character "1" correspond to the first paired end, and the four with last character "2" to the second paired end. \texttt{position} is position in base pairs where the alignment starts. The alignments are based on the hg18 assembly of the human genome.
 
-Altogether, these files encompass ca.~X Mio lines
+Altogether, these files encompass ca.~8.4 Mio lines. Here we will only focus on chromosome 14.
 
-We used \texttt{sed} \fixme{or whatever you prefer} to
+We used \texttt{sed} the following code to selected only those read pairs for which at least one end aligned to chromosome 14. 
 % e.g.
 <<readtable, eval=FALSE>>=
 ##  this should be a vector of all 6 filenames
 files = c("GSM455133_30E0LAAXX.1.maq.hic.summary.binned.txt.gz")
 
-df = vector(mode=="list", length=length(files))
+df = vector(mode="list", length=length(files))
 for(i in seq(along=files)) {
-  r = read.table(gzfile(files[i]), header=FALSE, sep="\t")
+  r = read.table(gzfile(files[i]), header=FALSE, sep="\t", comment.char = "", stringsAsFactors=FALSE)
   colnames(r) = c("read name",
-     "chromosome1", "position1", "strand1", "restrictionfragment1", 
+     "chromosome1", "position1", "strand1", "restrictionfragment1",
      "chromosome2", "position2", "strand2", "restrictionfragment2")
-  df[[i]] = subset(r, chromosome1==14L | chromosome2==14L) 
+  df[[i]] = subset(r, chromosome1==14L | chromosome2==14L)
+  cat("Done", i, "\n")
 }
 
-##  I am not quite whether all six files can be concatenated, or how exactly they belong together, so you need to figure that one out
-LiebermanAidenHiC2009 = do.call(rbind, df)
-save(LiebermanAidenHiC2009, file="/path/to/data/directory/LiebermanAidenHiC2009")
+dfc = do.call(rbind, df)
+  
+write.table(dfc, file = "HiC_GM_chr14_all", quote = FALSE, sep = "\t", row.names=FALSE)
 @ 
-We selected only those read pairs for which at least one end aligned to chromosome 14.
 
-Computation of the smoothed adjacency matrix
-Use Only read pairs within start and end in chr14
+Your task is now to load this file and look at the intrachromosomal interaction of chromosome 14. In oder to do this you need to filter for reads, where both ends mapped to chromosome 14. To have a look at the data plot position1 against position 2.
 
-<<subs>>=
-rs = subset(df, chromosome1==14L & chromosome2==14L) 
+<<readdata, eval=FALSE>>=
+dfc=read.table("/g/huber/course/HiC_GM_chr14_all", header=TRUE, sep="\t", comment.char = "", stringsAsFactors=FALSE) 
 
-pos = with(rs, cbind(position1, position2))
+rs = subset(dfc, chromosome1==14L & chromosome2==14L)
+
+plot(pos,pch='.')
+@
+
+We now will smooth the interaction matrix. As you can see the matrix looks pretty symmetric. To make it symmetric we add the transpose to the smoothed matrix and plot it. 
+
+<<smooth, eval=FALSE>>=
 
 library("KernSmooth")
 chrlen = max(pos)
-den = bkde2D( pos, bandwidth=c(1,1)*3e5, gridsize=ceiling(c(1,1)*chrlen/3e5))
+gridsize = ceiling(chrlen/3e5)
+den = bkde2D( pos, bandwidth=c(1,1)*3e5, gridsize=c(1,1)*gridsize)
+
+den$fhat <- den$fhat + t(den$fhat)
+
+with(den, image(x=x1,y=x2,z=fhat^.3, col=colorRampPalette(c("white","blue"))(256), useRaster=TRUE))
 @ 
 
-<<figmatrix,fig=TRUE,width=7,height=7>>=
+<<figmatrix,fig=TRUE,width=7,height=7, eval = FALSE>>=
 with(den, image(x=x1,y=x2,z=fhat^.3, col=colorRampPalette(c("white","blue"))(256), useRaster=TRUE))
 @ 
 
 \myincfig{figmatrix}{0.7\textwidth}{Adjacency matrix obtained from smoothing the positions of paired read alignments.}
+
+The diagonal is strongly pronounced because the contact probability higher for smaller genomic distances. To normalize for this we calculate the mean number of interactions at a given genomic distance. This is done by calculating a matrix with the mean counts on the diagonal and the secondary diagonals. First we do this for the secondary diagonals and make the matrix symmetric. After this we add the diagonal.  
+
+<<normalize, eval=FALSE>>=
+
+m = matrix(0, nrow=gridsize, ncol=gridsize)
+for(i in 1:gridsize){
+  off.diag <-  row(m)==col(m)+i
+  m[off.diag] <- mean(den$fhat[off.diag])
+}
+m <- m + t(m)
+
+diag(m) = mean(diag(den$fhat))
+
+@
+
+With the calculated matrix of average interactions we can normalize our data by deviding the two matrices and plot the result.
+
+<<normalize2, eval=FALSE>>=
+normDen <- den
+normDen$fhat <- normDen$fhat/m
+
+with(normDen, image(x=x1,y=x2,z=fhat, col=colorRampPalette(c("white","blue"))(256), useRaster=TRUE))
+@
+
+Now the plaid pattern is more pronounced than before. However it can still be improved by caluclating the correlation matrix, where the entry (i,j) is the correlation of the of the rowvector i with coloumvector j. Using a third color in the plot, we can see that the chromosome basically splits into 2 compartments.
+
+<<cormatrix, eval=FALSE>>=
+cm <- cor(normDen$fhat)
+
+corDen <- normDen
+corDen$fhat <- cm
+
+with(corDen, image(x=x1,y=x2,z=fhat, col=colorRampPalette(c("red", "white","blue"))(256), useRaster=TRUE))
+@
+
+As next step we perform a principal component analysis on the matrix and retrieve the first two eigenvectors. Because we want to compare these vectors to chip-seq experiments of histone modifications and DNAse1 sensitivity, we use run-length encoding (rle) to store the vectors. \fixme{Efficient way of storing data that is constant over long ranges.}  
+
+<<cormatrix, eval=FALSE>>=
+princp = princomp(corDen$fhat)
+plot(princp$loadings[,1])
+
+pc1Vec = Rle(values  = princp$loadings[,1],
+             lengths = c(normDen$x1[1], diff(normDen$x1)))
+pc2Vec = Rle(values  = princp$loadings[,2],
+             lengths = c(normDen$x1[1], diff(normDen$x1)))
+@
+
+To compare with the chip-seq data we have to load the files and store them as rle vectors. The data files contain the the following information about chip-seq peaks:
+\begin{center}
+\texttt{chromosome, start position, end position, name, score, strand, signal value, pValue, qValue}
+\end{center}
+We are only interesstend in data of chromosome 14 and want the start position, end position and the signal value in this range. To create the rle vectors we use the following function.
+
+<<readchipseq, eval=FALSE>>=
+createRleVector = function(file){
+  tab = read.table(gzfile(file), header=FALSE, sep="\t", comment.char = "", stringsAsFactors=FALSE)
+  colnames(tab) <- c("chr", "start", "end", "name", "score", "strand", "signalValue", "pValue", "qValue")
+  ## filter chromosom 14
+  tab = tab[tab$chr == "chr14",]  
+  RleVec = Rle(0, max(tab$end))
+  for(i in 1:nrow(tab)){
+    RleVec = RleVec + 
+                  Rle(values  = c(0, tab$signalValue[i], 0),
+                    lengths = c( tab$start[i]-1, tab$end[i]-tab$start[i]+1,   length(RleVec)-tab$end[i]))
+  }
+    
+  RleVec
+}
+
+files = paste("/g/huber/course", c("wgEncodeBroadHistoneGm12878H3k27me3StdPk.broadPeak.gz", 
+                                    "wgEncodeBroadHistoneGm12878H3k36me3StdPk.broadPeak.gz",
+                                    "wgEncodeUwDnaseGm06990HotspotsRep1.broadPeak.gz",
+                                    "wgEncodeUwDnaseGm06990HotspotsRep2.broadPeak.gz"), sep="/")
+
+H3k27me3 = createRleVector(files[1])
+H3k36me3 = createRleVector(files[2])
+
+Dnase1 = createRleVector(files[3])
+Dnase2 = createRleVector(files[4])
+@
+
+To combine the two DNAse1 replicates we have to make sure that the vectors have the same length. 
+
+<<combinednase, eval=FALSE>>=
+length(Dnase1)
+length(Dnase2)
+
+Dnase = Dnase1[seq(along=Dnase2)] + Dnase2
+@
+
+For plotting the first Eigenvector against the chip-seq data, we have to make sure that we use the same scale for all plots. Therefore we define a plotting function that covers the same genomic range by setting a fixed xlim. We also want to plot them on top of each other in one plot and do this by setting par accordingly.
+
+<<plotvectors, eval=FALSE>>=
+plotRle = function(RleVector, ...){
+  plot(end(RleVector), runValue(RleVector)+1, type="h", log="y", xlim = c(1.5e+7, 107000000), ...)
+}
+
+par(mfrow=c(4,1))
+
+plotRle(pc1Vec)
+plotRle(H3k27me3)
+plotRle(H3k36me3)
+plotRle(Dnase1)
+@
+
+From looking at the plots the data seems to correlate quite good. However to quantify this we have to calculate the correlation of the vectors. To do this we have to make sure that they are of the same length.
+
+<<correlation, eval=FALSE>>=
+length(H3k27me3)
+length(H3k36me3)
+length(Dnase)
+length(pc1Vec)
+
+x <- seq(along=H3k36me3)
+
+cor(H3k27me3[x], pc1Vec[x])
+cor(H3k36me3, pc1Vec[x])
+cor(Dnase[x], pc1Vec[x])
+@
+
+As you the the correlation coefficents are less convincing as the visual impression, especially for the DNAse1. 
+If you have time left, you can dicuss this topic or repeat the last steps for the second eigenvector of the principal component analysis.
 
 %---------------------------------------------------------
 % SessionInfo
