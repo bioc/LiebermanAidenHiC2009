@@ -88,7 +88,7 @@ contain HiC data for the GM06990 cell line from three experiments (two
 replicates with the restriction enzyme HindIII and one with NcoI). 
 The sample information is summarized in the following table.
 
-<<pData>>=
+<<pData, eval=FALSE>>=
 sampleAnnotation = 
   data.frame(
     file = c("GSM455133_30E0LAAXX.1.maq.hic.summary.binned.txt.gz",
@@ -146,7 +146,8 @@ We load the data and look at the scatterplot for start and end positions (Figure
 
 <<data>>=
 # data("HiC_GM_chr14.RData")    # can use this once the data set is in the package
-load(file.path("..", "extdata", "HiC_GM_chr14.RData"))
+load(file.path("/g/huber/course/LiebermanAidenHiC/", 
+"HiC_GM_chr14.RData"))
 pos = with(HiC_GM_chr14, cbind(position1, position2))
 @ 
 <<figscatter1,eval=FALSE>>=
@@ -306,8 +307,7 @@ createRleVector = function(file){
 These are the data files 
 %\fixme{Move this file import to Section~\ref{sec:obtain}, explain where you found these files (URL),  what they contain. Here, we can just load them using \Rfunction{data}.}
 <<ChIPfiles>>=
-inDir = "/g/huber/course"
-inDir = "/Users/huber/LiebermanAiden"
+inDir = "/g/huber/course/LiebermanAidenHiC"
 files = file.path(inDir, 
   c("wgEncodeBroadHistoneGm12878H3k27me3StdPk.broadPeak.gz", 
     "wgEncodeBroadHistoneGm12878H3k36me3StdPk.broadPeak.gz",
