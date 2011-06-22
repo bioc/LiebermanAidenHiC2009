@@ -146,7 +146,7 @@ We load the data and look at the scatterplot for start and end positions (Figure
 
 <<data>>=
 # data("HiC_GM_chr14.RData")    # can use this once the data set is in the package
-load(file.path("/g/huber/course/LiebermanAidenHiC/", 
+load(file.path("/g/huber/course/LiebermanAidenHiC-Datasets", 
 "HiC_GM_chr14.RData"))
 pos = with(HiC_GM_chr14, cbind(position1, position2))
 @ 
@@ -307,7 +307,7 @@ createRleVector = function(file){
 These are the data files 
 %\fixme{Move this file import to Section~\ref{sec:obtain}, explain where you found these files (URL),  what they contain. Here, we can just load them using \Rfunction{data}.}
 <<ChIPfiles>>=
-inDir = "/g/huber/course/LiebermanAidenHiC"
+inDir = "/g/huber/course/LiebermanAidenHiC-Datasets"
 files = file.path(inDir, 
   c("wgEncodeBroadHistoneGm12878H3k27me3StdPk.broadPeak.gz", 
     "wgEncodeBroadHistoneGm12878H3k36me3StdPk.broadPeak.gz",
