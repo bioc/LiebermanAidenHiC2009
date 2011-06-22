@@ -73,14 +73,12 @@ sampleAnnotation =
              "GSM455136_30U85AAXX.3.maq.hic.summary.binned.txt.gz",
              "GSM455137_30305AAXX.1.maq.hic.summary.binned.txt.gz",
              "GSM455138_30305AAXX.2.maq.hic.summary.binned.txt.gz"),
+    experiment = c(1, 1, 2, 2, 3, 3),
     restrictionenzyme = c("HindIII", "HindIII", "HindIII", "HindIII",
                           "NcoI", "NcoI"),
-    replicate = c(1,2,1,2,1,2),
-    otherFactor = rep(NA, 6),
+    lane = c(1,2,1,2,1,2),
     stringsAsFactors = FALSE)
 @ 
-\fixme{Fix the table: currently, column \Robject{restrictionenzyme} is wrong/random,
-       and add any other pertinent sample information.}
 
 The format of these files is explained in the file
 \texttt{GSE18199\_readme\_v4.txt}, which we provide in the
@@ -96,6 +94,8 @@ Altogether, these files encompass ca.~8.4 Mio lines. Here, we only focus on chro
 To prepare the data for this lab, we used the following code to select only those lines that correspond to read pairs for 
 which both ends aligned to chromosome 14, and to create the dataframe \Robject{HiC\_GM\_chr14}, which
 is provided in the package. 
+
+In this lab, we follow Lieberman-Aiden and pool the three experiments. This is justified by comparing the interaction matrices for each experiment. See Figures 1 B-D in the paper.
 % 
 <<readtable, eval=FALSE>>=  
 inputDir = "/g/huber/course/LiebermanAidenHiC"
@@ -113,7 +113,7 @@ HiC_GM_chr14 = do.call(rbind, df)
 save(HiC_GM_chr14,
      file=file.path("..", "extdata", "HiC_GM_chr14.RData"))
 @ 
-\fixme{Move this file into the package, so that it can be loaded with \Rfunction{data}, and add a man page.}
+% \fixme{Move this file into the package, so that it can be loaded with \Rfunction{data}, and add a man page.}
   
 %---------------------------------------------------------
 \section{The adjacency matrix for chromosome 14}
@@ -167,7 +167,8 @@ function?
 
 \myfig{figmatrix1}{0.75\textwidth}{%
   Adjacency matrix obtained from smoothing the positions of paired read alignments.
-  Compare this to Figure\fixme{?} in the paper~\cite{LiebermanAiden2009}.}
+  Compare this to Figure 3 A in the paper~\cite{LiebermanAiden2009}. Can you explain
+  why the diagonal looks more pronounced here than in the paper, and more off diagonal structures can be seen in the paper. Hint: Try to set a threshold for the maximum value of the data.}
 
 The diagonal is strongly pronounced because the contact frequency is highest for small genomic distances. To normalize for this, and focus on the (possibly interesting) deviations from this general relationship, we calculate the mean number of interactions at a given genomic distance. First we do this for the secondary diagonals and make the matrix symmetric. After this we add the diagonal.  
 
@@ -223,13 +224,13 @@ The result is shown in Figure~\ref{figmatrix3}.
 \myfig{figmatrix3}{0.75\textwidth}{%
   Correlation matrix.}
 
-As next step we perform a principal component analysis on the matrix and retrieve the first two eigenvectors. Because we want to compare these vectors to ChIP-seq experiments of histone modifications and DNAse1 sensitivity, we use run-length encoding (\Rclass{Rle}) to store the vectors. \fixme{Explain \Rclass{Rle} - it is an efficient way of long sequences that have long constant runs.}  
+As next step we perform a principal component analysis on the matrix and retrieve the first two eigenvectors. Because we want to compare these vectors to ChIP-seq experiments of histone modifications and DNAse1 sensitivity, we use run-length encoding (\Rclass{Rle}) to store the vectors. The class \Rclass{Rle} provides an efficient way of storing vectors that have long constant runs.}  
 
 <<cormatrix, cache=TRUE>>=
 princp = princomp(cm)
 @ 
 <<figprcomp1, fig=TRUE,width=8>>=
-plot(princp$loadings[,1])
+plot(den$x1, princp$loadings[,1])
 @ 
 See Figure~\ref{figprcomp1}.
 \myfig{figprcomp1}{0.8\textwidth}{%
@@ -246,13 +247,18 @@ pc2Vec = Rle(values  = princp$loadings[,2],
 %---------------------------------------------------------
 \section{Comparison with chromatin state data}
 %---------------------------------------------------------
+We would like to explore the pattern we found in the previous section in the context
+of chromatin state data. We use data that were produced in the Encode project  \cite{}, which we downloaded from these URLs.
+\begin{tabular}{l}
+  filename1 & what is it\\
+  filename2 & what is it\\
+\end{table}
 
-To compare with the ChIP-seq data, we load the files and store them as \Rclass{Rle} vectors. 
 The data files contain the the following information about ChIP-seq peaks:
 \begin{center}
 \texttt{chromosome, start position, end position, name, score, strand, signal value, pValue, qValue}
 \end{center}
-We are only interested in data for chromosome 14. For each peak, we want the start position, end position and the signal value in this range. 
+We load the files and store them as \Rclass{Rle} vectors and are only interested in data for chromosome 14. For each peak, we want the start position, end position and the signal value in this range. 
 To read the data, we use the following function.
 %
 <<readchipseq, results=hide>>=
@@ -273,8 +279,8 @@ createRleVector = function(file){
 }
 @ 
 
-These are the data files \fixme{Move this file import to Section~\ref{sec:obtain}, explain where you found these files (URL),
-        what they contain. Here, we can just load them using \Rfunction{data}.}
+These are the data files 
+%\fixme{Move this file import to Section~\ref{sec:obtain}, explain where you found these files (URL),  what they contain. Here, we can just load them using \Rfunction{data}.}
 <<ChIPfiles>>=
 inDir = "/g/huber/course"
 inDir = "/Users/huber/LiebermanAiden"
