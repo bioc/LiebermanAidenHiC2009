@@ -75,6 +75,11 @@ there appear to be any interactions between these different data types.
 %--------------------------------------------------
 \section{Obtaining the data}\label{sec:obtain}
 %--------------------------------------------------
+  
+\fixme{It would probably better to move this section to the end of the lab, as an appendix
+       that explains how the data object HiC_GM_chr14.RData was created; and to start the main
+       text with Section~\ref{sec:adjmat}}.
+
 The data associated with the article~\cite{LiebermanAiden2009} is available from NCBI Gene Expression Omnibus
 under the accession GSE18199. From this record, we downloaded the supplementary file GSE18199\_RAW.tar and extracted
 its content.
@@ -140,14 +145,14 @@ save(HiC_GM_chr14,
 % \fixme{Move this file into the package, so that it can be loaded with \Rfunction{data}, and add a man page.}
   
 %---------------------------------------------------------
-\section{The adjacency matrix for chromosome 14}
+\section{The adjacency matrix for chromosome 14}\label{sec:adjmat}
 %---------------------------------------------------------
 We load the data and look at the scatterplot for start and end positions (Figure~\ref{figscatter.png}).
 
 <<data>>=
 # data("HiC_GM_chr14.RData")    # can use this once the data set is in the package
-load(file.path("/g/huber/course/LiebermanAidenHiC-Datasets", 
-"HiC_GM_chr14.RData"))
+load(file.path("/g/huber/course/LiebermanAidenHiC-Datasets",  "HiC_GM_chr14.RData"))
+head(HiC_GM_chr14)
 pos = with(HiC_GM_chr14, cbind(position1, position2))
 @ 
 <<figscatter1,eval=FALSE>>=
