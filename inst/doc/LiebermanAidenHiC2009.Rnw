@@ -37,13 +37,37 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-\begin{enumerate}
-\item Why is it important?
-\item What is the problem?
-\item What do we here do about it?
-\item What will you learn?
-\item What is the wider implication?
-\end{enumerate}
+While we often think of the genome as a linear object, in reality
+chromosomes are folded in a highly complex fashion with regions that are
+located far apart on the same chromosome often coming in contact with
+one another. For example, many enhancer or insulator elements are 
+located
+distal to the genes they target and come in contact via
+folding. Hence, understanding the conformation of chromatin is
+criticial for understanding regulatory mechanisms in a cell. With the
+advent of next-generation sequencing technology, we can now study
+chromosome conformation genome-wide using a technique called Hi-C. In
+brief, after cross-linking and digestion, this technique captures
+a short region of DNA sequence from a region where there is an
+interaction between genomic region {\it i} and genomic region {\it
+  j}. For example, regions {\it i} and {\it j} might be two
+non-adjacent regions on the same chromosome --- in the fragment
+captured, sequence from region {\it i} is at one end and sequence from
+region {\it j} is at the other. Having captured these
+fragments, paired-end sequencing can then be used to assay a small
+section of sequence from region {\it i} and region {\it j}. By mapping
+these reads back to the reference genome, and by counting the number
+of reads with one end in region {\it i} and the other end in region
+{\it j} one can determine the strength of evidence for an interaction
+between those two regions.
+
+In this practical, we will analyze one of the first Hi-C datasets
+generated. We will understand how to obtain the data and read it into
+R, before processing these data to determine the number of
+interactions between different regions on a particular
+chromosome. Finally, we will combine the conformational information
+with data about other epigenetic modifications to investigate whether
+there appear to be any interactions between these different data types.
 \end{abstract}
 
 \tableofcontents
