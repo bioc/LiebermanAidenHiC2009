@@ -249,7 +249,7 @@ The result is shown in Figure~\ref{figmatrix3}.
 \myfig{figmatrix3}{0.75\textwidth}{%
   Correlation matrix.}
 
-As next step we perform a principal component analysis on the matrix and retrieve the first two eigenvectors. Because we want to compare these vectors to ChIP-seq experiments of histone modifications and DNAse1 sensitivity, we use run-length encoding (\Rclass{Rle}) to store the vectors. The class \Rclass{Rle} provides an efficient way of storing vectors that have long constant runs.}  
+As next step we perform a principal component analysis on the matrix and retrieve the first two eigenvectors. Because we want to compare these vectors to ChIP-seq experiments of histone modifications and DNAse1 sensitivity, we use run-length encoding (\Rclass{Rle}) to store the vectors. The class \Rclass{Rle} provides an efficient way of storing vectors that have long constant runs.  
 
 <<cormatrix, cache=TRUE>>=
 princp = princomp(cm)
@@ -274,10 +274,10 @@ pc2Vec = Rle(values  = princp$loadings[,2],
 %---------------------------------------------------------
 We would like to explore the pattern we found in the previous section in the context
 of chromatin state data. We use data that were produced in the Encode project  \cite{}, which we downloaded from these URLs.
-\begin{tabular}{l}
+\begin{tabular}{ll}
   filename1 & what is it\\
   filename2 & what is it\\
-\end{table}
+\end{tabular}
 
 The data files contain the the following information about ChIP-seq peaks:
 \begin{center}
