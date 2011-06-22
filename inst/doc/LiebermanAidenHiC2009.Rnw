@@ -33,7 +33,7 @@
 \renewcommand{\floatpagefraction}{0.9}	
 
 \title{\textsf{\textbf{Exploration of HiC data}}}
-\author{Felix Klein, Wolfgang Huber}
+\author{Felix Klein, John Marioni, Wolfgang Huber}
 \begin{document}
 \maketitle
 \begin{abstract}
