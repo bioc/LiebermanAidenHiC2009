@@ -47,11 +47,8 @@ folding. Hence, understanding the conformation of chromatin is
 criticial for understanding regulatory mechanisms in a cell. With the
 advent of next-generation sequencing technology, we can now study
 chromosome conformation genome-wide using a technique called Hi-C. In
-brief, after cross-linking and digestion, this technique captures
-a short region of DNA sequence from a region where there is an
-interaction between genomic region {\it i} and genomic region {\it
-  j}. For example, regions {\it i} and {\it j} might be two
-non-adjacent regions on the same chromosome --- in the fragment
+brief, after cross-linking, digestion, ligation, and sonication, this technique captures interacting regions of DNA sequence by paired-end sequencing. For example, regions {\it i} and {\it j} might be two
+non-adjacent regions on the same chromosome in the fragment
 captured, sequence from region {\it i} is at one end and sequence from
 region {\it j} is at the other. Having captured these
 fragments, paired-end sequencing can then be used to assay a small
@@ -62,7 +59,7 @@ of reads with one end in region {\it i} and the other end in region
 between those two regions.
 
 In this practical, we will analyze one of the first Hi-C datasets
-generated. We will understand how to obtain the data and read it into
+generated~\cite{LiebermanAiden2009}. We will understand how to obtain the data and read it into
 R, before processing these data to determine the number of
 interactions between different regions on a particular
 chromosome. Finally, we will combine the conformational information
@@ -73,85 +70,26 @@ there appear to be any interactions between these different data types.
 \tableofcontents
 
 %--------------------------------------------------
-\section{Obtaining the data}\label{sec:obtain}
+\section{Introduction to the data}\label{sec:intro}
 %--------------------------------------------------
-  
-\fixme{It would probably better to move this section to the end of the lab, as an appendix
-       that explains how the data object HiC_GM_chr14.RData was created; and to start the main
-       text with Section~\ref{sec:adjmat}}.
 
-The data associated with the article~\cite{LiebermanAiden2009} is available from NCBI Gene Expression Omnibus
-under the accession GSE18199. From this record, we downloaded the supplementary file GSE18199\_RAW.tar and extracted
-its content.
-\begin{lstlisting}
-$ wget ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/series/GSE18199/GSE18199_RAW.tar
-$ tar -xvf GSE18199_RAW.tar  
-\end{lstlisting}
+In this lab we will work with the data of the GM06990 cell line obtained from three experiments. Of these, two replicates use the restriction enzyme HindIII and one using NcoI. Altogether, these experiments produced ca.~8.4 Mio mapable paired-end reads. Here, we only focus on chromosome 14. How the data can be downloaded from the internet and formated into the dataframe \Robject{HiC\_GM\_chr14}, which is provided in the package, is described in section \ref{sec:obtain} in detail. We follow the analysis of Lieberman-Aiden and pool the three experiments. This is justified by comparing the interaction matrices for each experiment. See Figures 1 B-D in the paper.
 
-From the resulting set of files, we selected six files, whose names are given in the following code chunk. They
-contain HiC data for the GM06990 cell line from three experiments (two
-replicates with the restriction enzyme HindIII and one with NcoI). 
-The sample information is summarized in the following table.
-
-<<pData, eval=FALSE>>=
-sampleAnnotation = 
-  data.frame(
-    file = c("GSM455133_30E0LAAXX.1.maq.hic.summary.binned.txt.gz",
-             "GSM455134_30E0LAAXX.2.maq.hic.summary.binned.txt.gz",
-             "GSM455135_30U85AAXX.2.maq.hic.summary.binned.txt.gz",
-             "GSM455136_30U85AAXX.3.maq.hic.summary.binned.txt.gz",
-             "GSM455137_30305AAXX.1.maq.hic.summary.binned.txt.gz",
-             "GSM455138_30305AAXX.2.maq.hic.summary.binned.txt.gz"),
-    experiment = c(1, 1, 2, 2, 3, 3),
-    restrictionenzyme = c("HindIII", "HindIII", "HindIII", "HindIII",
-                          "NcoI", "NcoI"),
-    lane = c(1,2,1,2,1,2),
-    stringsAsFactors = FALSE)
-@ 
-
-The format of these files is explained in the file
-\texttt{GSE18199\_readme\_v4.txt}, which we provide in the
-\texttt{extdata} directory of the package.
-Briefly, each line corresponds to one paired end alignment.
+The format of \Robject{HiC\_GM\_chr14} is explained in the file \texttt{GSE18199\_readme\_v4.txt}, which we provide in the \texttt{extdata} directory of the package. Briefly, each line corresponds to one paired end alignment. 
 Each line has 9 entries:
 \begin{center}
 \texttt{read name, chromosome1, position1, strand1, restrictionfragment1, chromosome2, position2, strand2, restrictionfragment2}
 \end{center}
 Of these,  the four with last character "1" correspond to the first paired end, and the four with last character "2" to the second paired end. \texttt{position} is position in base pairs where the alignment starts. The alignments are based on the hg18 assembly of the human genome.
 
-Altogether, these files encompass ca.~8.4 Mio lines. Here, we only focus on chromosome 14.
-To prepare the data for this lab, we used the following code to select only those lines that correspond to read pairs for 
-which both ends aligned to chromosome 14, and to create the dataframe \Robject{HiC\_GM\_chr14}, which
-is provided in the package. 
-
-In this lab, we follow Lieberman-Aiden and pool the three experiments. This is justified by comparing the interaction matrices for each experiment. See Figures 1 B-D in the paper.
-% 
-<<readtable, eval=FALSE>>=  
-inputDir = "/g/huber/course/LiebermanAidenHiC"
-df = vector(mode="list", length=nrow(sampleAnnotation))
-for(i in seq(along=df)) {
-  cat("Reading file", i, "\n")
-  r = read.table(gzfile(file.path(inputDir, sampleAnnotation$file[i])), 
-           header=FALSE, sep="\t", comment.char = "", stringsAsFactors=FALSE)
-  colnames(r) = c("read name",
-     "chromosome1", "position1", "strand1", "restrictionfragment1",
-     "chromosome2", "position2", "strand2", "restrictionfragment2")
-  df[[i]] = subset(r, (chromosome1==14L) & (chromosome2==14L))
-}
-HiC_GM_chr14 = do.call(rbind, df)
-save(HiC_GM_chr14,
-     file=file.path("..", "extdata", "HiC_GM_chr14.RData"))
-@ 
-% \fixme{Move this file into the package, so that it can be loaded with \Rfunction{data}, and add a man page.}
-  
 %---------------------------------------------------------
 \section{The adjacency matrix for chromosome 14}\label{sec:adjmat}
 %---------------------------------------------------------
-We load the data and look at the scatterplot for start and end positions (Figure~\ref{figscatter.png}).
+As first step, we load the data and have a look at the content of the data.frame. A first visual impression of the interactions is obtained by plotting the position of the first fragment against the position of the second fragment in a scatterplot (Figure~\ref{figscatter.png}).
 
 <<data>>=
-# data("HiC_GM_chr14.RData")    # can use this once the data set is in the package
-load(file.path("/g/huber/course/LiebermanAidenHiC-Datasets",  "HiC_GM_chr14.RData"))
+library(LiebermanAidenHiC2009)
+data("HiC_GM_chr14")
 head(HiC_GM_chr14)
 pos = with(HiC_GM_chr14, cbind(position1, position2))
 @ 
@@ -164,21 +102,19 @@ plot(pos, pch='.', col="#77777777")
 dev.off()
 @
 
-\myfig{figscatter.png}{0.75\textwidth}{%
-Scatterplot of positions 1 and 2 for the HiC read pairs for which both ends map to chromosome 14.
+\myfig{figscatter}{0.75\textwidth}{%
+Scatterplot of fragment position 1 againts 2 for the HiC read pairs for which both ends map to chromosome 14.
 }
 
-To create a matrix of intrachromosomal locus--locus interaction frequencies, let us smooth the data.
+To create a matrix of intrachromosomal locus--locus interaction frequencies, let us smooth the data using the bkde2D function of the KernSmooth package.
 
 <<smooth, cache=TRUE, results=hide>>=
-library("KernSmooth")
 chrlen = max(pos)
 gridsize = ceiling(chrlen/3e5)
 den = bkde2D( pos, bandwidth=c(1,1)*3e5, gridsize=c(1,1)*gridsize)
 @ 
 
-Since the the labeling of the reads within a pair as 1 or 2 is arbitrary, and since 
-pairwise interaction is a symmetric concept, we symmetrize the matrix.
+Since the the labeling of the reads within a pair as 1 or 2 is arbitrary, and pairwise interaction is a symmetric concept, we symmetrize the matrix by adding the transpose.
 <<symm, cache=TRUE>>=
 den$fhat <- den$fhat + t(den$fhat)
 @ 
@@ -196,9 +132,7 @@ function?
 \end{itemize}
 
 \myfig{figmatrix1}{0.75\textwidth}{%
-  Adjacency matrix obtained from smoothing the positions of paired read alignments.
-  Compare this to Figure 3 A in the paper~\cite{LiebermanAiden2009}. Can you explain
-  why the diagonal looks more pronounced here than in the paper, and more off diagonal structures can be seen in the paper. Hint: Try to set a threshold for the maximum value of the data.}
+  Interaction matrix obtained from smoothing the positions of paired read alignments. Compare this to Figure 3 A in the paper~\cite{LiebermanAiden2009}. Can you explain why the diagonal looks more pronounced here than in the paper, and more off diagonal structures can be seen in the paper. Hint: Try to set a threshold for the maximum value of the data.}
 
 The diagonal is strongly pronounced because the contact frequency is highest for small genomic distances. To normalize for this, and focus on the (possibly interesting) deviations from this general relationship, we calculate the mean number of interactions at a given genomic distance. First we do this for the secondary diagonals and make the matrix symmetric. After this we add the diagonal.  
 
@@ -218,10 +152,9 @@ image(x=den$x1, y=den$x2, z=m^0.3,
       col=colorRampPalette(c("white","blue"))(256), useRaster=TRUE)
 @ 
 \myfig{figmatm}{0.75\textwidth}{%
-  The matrix \Robject{m}.}
+  The matrix of avarage interactions \Robject{m}. It looks like a ridge that falls of on both sides of the diagonal.}
 
-With the calculated matrix of average interactions we can normalize our data by dividing the two matrices 
-and plot the result (Figure~\ref{figmatrix2}).
+With the calculated matrix of average interactions we can normalize our data by dividing the two matrices and plot the result (Figure~\ref{figmatrix2}).
 %
 <<normalize, cache=TRUE>>=
 fhatNorm <- den$fhat/m
@@ -232,12 +165,11 @@ image(x=den$x1, y=den$x2, z=fhatNorm,
 @
 
 \myfig{figmatrix2}{0.75\textwidth}{%
-  After normalisation by the expected number of read pairs.}
+  Interaction matrix after normalisation by the expected number of read pairs.}
 
-Now the plaid pattern is more pronounced than before. Another view on the data
-is provided by caluclating the correlation matrix, where the entry $(i,j)$ is the correlation 
-of the of the row $i$ with row $j$. 
-Using a third color in the plot, we can see that the chromosome basically splits into 2 compartments.
+We can see that the plaid pattern is more pronounced than before, but it can still be improved.
+
+Another view on the data is provided by caluclating the correlation matrix, where the entry $(i,j)$ is the correlation of the of the row $i$ with row $j$. Plotting the correlation matrix and using a third color in the plot, we can see that the chromosome basically splits into 2 compartments (blue and red) shown in Figure~\ref{figmatrix3}.
 
 <<cormatrix, cache=TRUE>>=
 cm <- cor(fhatNorm)
@@ -248,26 +180,24 @@ image(x=den$x1, y=den$x2, z=cm,
      zlim=c(-1,1),
      col=colorRampPalette(c("red", "white","blue"))(256), useRaster=TRUE)
 @
-
-The result is shown in Figure~\ref{figmatrix3}.
-
 \myfig{figmatrix3}{0.75\textwidth}{%
-  Correlation matrix.}
+  Correlation matrix calculated from the normalized interaction matrix.}
 
-As next step we perform a principal component analysis on the matrix and retrieve the first two eigenvectors. Because we want to compare these vectors to ChIP-seq experiments of histone modifications and DNAse1 sensitivity, we use run-length encoding (\Rclass{Rle}) to store the vectors. The class \Rclass{Rle} provides an efficient way of storing vectors that have long constant runs.  
+As next step we perform a principal component analysis on the matrix and retrieve the first two eigenvectors. 
+
+Because we want to compare these vectors to ChIP-seq experiments of histone modifications and DNAse1 sensitivity, we use run-length encoding (\Rclass{Rle}) to store the vectors. The \Rclass{Rle} class of the IRanges package provides an efficient way of storing vectors that have long constant runs.  
 
 <<cormatrix, cache=TRUE>>=
 princp = princomp(cm)
 @ 
 <<figprcomp1, fig=TRUE,width=8>>=
-plot(den$x1, princp$loadings[,1])
+plot(den$x1, princp$loadings[,1], type="l")
 @ 
 See Figure~\ref{figprcomp1}.
 \myfig{figprcomp1}{0.8\textwidth}{%
   \Robject{princp\$loadings[,1]}.}
 
 <<pc1Vec,results=hide>>=
-library("IRanges")
 pc1Vec = Rle(values  = princp$loadings[,1],
              lengths = c(den$x1[1], diff(den$x1)))
 pc2Vec = Rle(values  = princp$loadings[,2],
@@ -277,28 +207,17 @@ pc2Vec = Rle(values  = princp$loadings[,2],
 %---------------------------------------------------------
 \section{Comparison with chromatin state data}
 %---------------------------------------------------------
-We would like to explore the pattern we found in the previous section in the context
-of chromatin state data. We use data that were produced in the Encode project  \cite{}, which we downloaded from these URLs.
-\begin{tabular}{ll}
-  filename1 & what is it\\
-  filename2 & what is it\\
-\end{tabular}
+We would like to explore the pattern we found in the previous section in the context of chromatin state data. For this we use data that were produced in the Encode project \cite{}. How this data were obtainted and formated is described in \sec{sec:obtain}.
 
-The data files contain the the following information about ChIP-seq peaks:
+The data files contain the the following information about ChIP-seq peaks found for chromosome 14:
 \begin{center}
 \texttt{chromosome, start position, end position, name, score, strand, signal value, pValue, qValue}
 \end{center}
-We load the files and store them as \Rclass{Rle} vectors and are only interested in data for chromosome 14. For each peak, we want the start position, end position and the signal value in this range. 
-To read the data, we use the following function.
+For each peak, we want the start position, end position and the signal value in this range. To create a Rle vector from the data, we use the following function. 
 %
 <<readchipseq, results=hide>>=
-createRleVector = function(file){
-  tab = read.table(gzfile(file), header=FALSE, sep="\t", comment.char = "", 
-            stringsAsFactors=FALSE)
-  colnames(tab) <- c("chr", "start", "end", "name", "score", "strand", 
-                     "signalValue", "pValue", "qValue")
-  ## filter chromosom 14
-  tab = tab[tab$chr == "chr14",]  
+createRleVector = function(tab){
+  ## create Rle vector
   RleVec = Rle(0, max(tab$end))
   for(i in 1:nrow(tab)){
     RleVec = RleVec + 
@@ -309,29 +228,23 @@ createRleVector = function(file){
 }
 @ 
 
-These are the data files 
-%\fixme{Move this file import to Section~\ref{sec:obtain}, explain where you found these files (URL),  what they contain. Here, we can just load them using \Rfunction{data}.}
-<<ChIPfiles>>=
-inDir = "/g/huber/course/LiebermanAidenHiC-Datasets"
-files = file.path(inDir, 
-  c("wgEncodeBroadHistoneGm12878H3k27me3StdPk.broadPeak.gz", 
-    "wgEncodeBroadHistoneGm12878H3k36me3StdPk.broadPeak.gz",
-    "wgEncodeUwDnaseGm06990HotspotsRep1.broadPeak.gz",
-    "wgEncodeUwDnaseGm06990HotspotsRep2.broadPeak.gz"))
-@ 
+The chip-seq data can be loaded from the package and the function can be applied directly.
+
+\fixme{Change the name of the data.frames in chipSeqData??}
 <<read,cache=TRUE>>=
-H3k27me3 = createRleVector(files[1])
-H3k36me3 = createRleVector(files[2])
-Dnase1   = createRleVector(files[3])
-Dnase2   = createRleVector(files[4])
+data("chipSeqData")
+H3k27me3 = createRleVector(H3k27me3)
+H3k36me3 = createRleVector(H3k36me3)
+DNAse1   = createRleVector(DNAse1)
+DNAse2   = createRleVector(DNAse2)
 @
 
 To combine the two DNAse1 replicates we have to make sure that the vectors have the same length. 
 
 <<combinednase>>=
-length(Dnase1)
-length(Dnase2)
-Dnase = Dnase1[seq(along=Dnase2)] + Dnase2
+length(DNAse1)
+length(DNAse2)
+DNAse = DNAse1[seq(along=DNAse2)] + DNAse2
 @
 
 For plotting the first eigenvector against the ChIP-seq data, we have to make sure that we use the same scale for all plots. Therefore we define a plotting function that covers the same genomic range by setting a fixed $x$-axis range \Robject{xlim}. We also want to plot them on top of each other in one plot and do this by setting \Robject{par} accordingly.
@@ -347,38 +260,134 @@ par(mfrow=c(4,1), mai=c(0.5,0.7,0.1,0.1))
 plotRle(pc1Vec)
 plotRle(H3k27me3)
 plotRle(H3k36me3)
-plotRle(Dnase1)
+plotRle(DNAse1)
 @
+\fixme{How to restore par after plotting?}
 
 \myfig{figrle}{0.9\textwidth}{%
   Plots of \Robject{pc1Vec}, \Robject{H3k27me3}, \Robject{H3k36me3},
-  \Robject{Dnase1}.}
+  \Robject{DNAse1}.}
 
-From looking at the plots the data seem to correlate quite well. However, to 
-assess this more quantitatively, let us calculate the correlation of the vectors. 
-To do this we need to make sure that they are of the same length.
+From looking at the plots the data seem to correlate quite well. To 
+assess this more quantitatively we calculate the correlation of the vectors. To do this we need to make sure that they all are of same length.
 
 <<correlation>>=
 c(length(H3k27me3),
   length(H3k36me3),
-  length(Dnase),
+  length(DNAse),
   length(pc1Vec))
 
 x = seq(along=H3k36me3)
 
 cor(H3k27me3[x], pc1Vec[x])
 cor(H3k36me3, pc1Vec[x])
-cor(Dnase[x], pc1Vec[x])
+cor(DNAse[x], pc1Vec[x])
 @
 
 As you see, the correlation coefficents are less convincing than the visual impression, especially for DNAse1. 
-Discuss this topic. Repeat the last steps for the second eigenvector of the principal component analysis.
-Which other analyses could one do now?
+\begin{itemize}
+\item Discuss this topic. Repeat the last steps for the second eigenvector of the principal component analysis.
+\item Which other analyses or annotations could one do now?
+\end{itemize}
+
+
+%--------------------------------------------------
+\section{Obtaining the data}\label{sec:obtain}
+%--------------------------------------------------
+  
+The data associated with the article~\cite{LiebermanAiden2009} is available from NCBI Gene Expression Omnibus under the accession GSE18199. From this record, we downloaded the supplementary file GSE18199\_RAW.tar and extracted its content.
+\begin{lstlisting}
+$ wget ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/series/GSE18199/GSE18199_RAW.tar
+$ tar -xvf GSE18199_RAW.tar  
+\end{lstlisting}
+
+From the resulting set of files, we selected six files, whose names are given in the following code chunk. They contain HiC data for the GM06990 cell line from three experiments (two replicates with the restriction enzyme HindIII and one with NcoI). The sample information is summarized in the following table.
+
+<<pData, eval=FALSE>>=
+sampleAnnotation = 
+  data.frame(
+    file = c("GSM455133_30E0LAAXX.1.maq.hic.summary.binned.txt.gz",
+             "GSM455134_30E0LAAXX.2.maq.hic.summary.binned.txt.gz",
+             "GSM455135_30U85AAXX.2.maq.hic.summary.binned.txt.gz",
+             "GSM455136_30U85AAXX.3.maq.hic.summary.binned.txt.gz",
+             "GSM455137_30305AAXX.1.maq.hic.summary.binned.txt.gz",
+             "GSM455138_30305AAXX.2.maq.hic.summary.binned.txt.gz"),
+    experiment = c(1, 1, 2, 2, 3, 3),
+    lane = c(1,2,1,2,1,2),
+    restrictionenzyme = c("HindIII", "HindIII", "HindIII", "HindIII",
+                          "NcoI", "NcoI"),
+    stringsAsFactors = FALSE)
+@ 
+
+The format of these files is explained in the file \texttt{GSE18199\_readme\_v4.txt}, which we provide in the \texttt{extdata} directory of the package. Briefly, each line corresponds to one paired end alignment. Each line has 9 entries:
+\begin{center}
+\texttt{read name, chromosome1, position1, strand1, restrictionfragment1, chromosome2, position2, strand2, restrictionfragment2}
+\end{center}
+Of these,  the four with last character "1" correspond to the first paired end, and the four with last character "2" to the second paired end. \texttt{position} is position in base pairs where the alignment starts. The alignments are based on the hg18 assembly of the human genome.
+
+Altogether, these files encompass ca.~8.4 Mio lines. Here, we only focus on chromosome 14. To prepare the data for this lab, we used the following code to select only those lines that correspond to read pairs for which both ends aligned to chromosome 14 and create the dataframe \Robject{HiC\_GM\_chr14}, which is provided in the package. 
+
+In this lab, we follow Lieberman-Aiden and pool the three experiments. This is justified by comparing the interaction matrices for each experiment. See Figures 1 B-D in the paper.
+% 
+<<readtable, eval=FALSE>>=  
+inputDir = "WHERE YOU SAVED THE FILES"
+outputDir = "WHERE YOU WANT TO SAVE THE FILES"
+df = vector(mode="list", length=nrow(sampleAnnotation))
+for(i in seq(along=df)) {
+  cat("Reading file", i, "\n")
+  r = read.table(gzfile(file.path(inputDir, sampleAnnotation$file[i])), 
+           header=FALSE, sep="\t", comment.char = "", stringsAsFactors=FALSE)
+  colnames(r) = c("read name",
+     "chromosome1", "position1", "strand1", "restrictionfragment1",
+     "chromosome2", "position2", "strand2", "restrictionfragment2")
+  ## filter chromosome 14
+  df[[i]] = subset(r, (chromosome1==14L) & (chromosome2==14L))
+}
+HiC_GM_chr14 = do.call(rbind, df)
+save(HiC_GM_chr14,
+     file=file.path(outputDir, "HiC_GM_chr14.RData"))
+@
+
+For comparison with the cromatin state we use chip-seq data produced within the ENCODE project. It was downloaded from these URLs.
+\begin{tabular}{ll}
+  filename1 & what is it\\
+  filename2 & what is it\\
+\end{tabular}
+
+The following files are read into data.frames and saved.
+<<ChIPfiles, eval=FALSE>>=
+files = c("wgEncodeBroadHistoneGm12878H3k27me3StdPk.broadPeak.gz", 
+    "wgEncodeBroadHistoneGm12878H3k36me3StdPk.broadPeak.gz",
+    "wgEncodeUwDnaseGm06990HotspotsRep1.broadPeak.gz",
+    "wgEncodeUwDnaseGm06990HotspotsRep2.broadPeak.gz")
+@
+
+<<readtable, eval=FALSE>>=
+inputDir = "WHERE YOU SAVED THE FILES"
+outputDir = "WHERE YOU WANT TO SAVE THE FILES"
+cs = vector(mode="list", length=length(files))
+for(i in seq(along=files)) {
+  cat("Reading file", i, "\n")
+  tab = read.table(gzfile(file.path(inputDir, files[i])),   header=FALSE, sep="\t", comment.char = "",   stringsAsFactors=FALSE)
+  colnames(tab) <- c("chr", "start", "end", "name", "score", "strand", 
+                     "signalValue", "pValue", "qValue")
+  cs[[i]] = subset(tab, chr=="chr14")
+}
+
+H3k27me3 = cs[[1]]
+H3k36me3 = cs[[2]]
+DNAse1 = cs[[3]]
+DNAse2 = cs[[4]]
+
+save(list=c("H3k27me3", "H3k36me3", "DNAse1", "DNAse2"), file=file.path(outputDir, "chipSeqData.RData"))
+@
+
 
 %---------------------------------------------------------
 % SessionInfo
 %---------------------------------------------------------
-\begin{table*}[tbp]
+\fixme{How can I prevent sessionInfo from splitting the text??}
+\begin{table*}[btp]
 \begin{minipage}{\textwidth}
 <<sessionInfo, results=tex, print=TRUE>>=
 toLatex(sessionInfo())
