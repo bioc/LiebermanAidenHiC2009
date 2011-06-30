@@ -79,7 +79,7 @@ Of these,  the four with last character "1" correspond to the first paired end, 
 %---------------------------------------------------------
 \section{The adjacency matrix for chromosome 14}\label{sec:adjmat}
 %---------------------------------------------------------
-As first step, we load the data and have a look at the content of the data.frame. A first visual impression of the interactions is obtained by plotting the position of the first fragment against the position of the second fragment in a scatterplot (Figure~\ref{figscatter.png}).
+As first step, we load the data and have a look at the content of the data.frame. A first visual impression of the interactions is obtained by plotting the position of the first fragment against the position of the second fragment in a scatterplot (Figure~\ref{figscatter}).
 
 <<data>>=
 library(LiebermanAidenHiC2009)
@@ -127,7 +127,7 @@ The result is shown in Figure~\ref{figmatrix1}.
 \myfig{figmatrix1}{0.75\textwidth}{%
   Interaction matrix obtained from smoothing the positions of paired read alignments. Compare this to Figure 3 A in the paper~\cite{LiebermanAiden2009}. Can you explain why the diagonal looks more pronounced here than in the paper, and more off diagonal structures can be seen in the paper. Hint: Try to set a threshold for the maximum value of the data.}
 
-The diagonal is strongly pronounced because the contact frequency is highest for small genomic distances. To normalize for this, and focus on the (possibly interesting) deviations from this general relationship, we calculate the mean number of interactions at a given genomic distance. First we do this for the secondary diagonals and then add the diagonal.
+The diagonal is strongly pronounced because the contact frequency is highest for small genomic distances. To normalize for this, and focus on the (possibly interesting) deviations from this general relationship, we calculate the mean number of interactions at a given genomic distance. First we do this for the secondary diagonals and then add the diagonal. The resulting matrix m is plotted in Figure~\ref{figmatm}. 
 
 <<normalize, cache=TRUE>>=
 m = matrix(0, nrow=gridsize, ncol=gridsize)
@@ -139,7 +139,6 @@ m = m + t(m)
 diag(m) = mean(diag(den$fhat))
 @
 
-We plot the matrix \Robject{m} (Figure~\ref{figmatm}).
 <<figmatm,fig=TRUE,width=7,height=7>>=
 image(x=den$x1, y=den$x2, z=m^0.3, 
       col=colorRampPalette(c("white","blue"))(256), useRaster=TRUE)
@@ -147,13 +146,17 @@ image(x=den$x1, y=den$x2, z=m^0.3,
 \myfig{figmatm}{0.75\textwidth}{%
   The matrix of avarage interactions \Robject{m}. It looks like a ridge that falls of on both sides of the diagonal.}
   
-Plotting the avarage number of interactions against the genomic distance is a better way of visualizing the data. It is achieved with the following command.
+Plotting the avarage number of interactions against the genomic distance is a better way of visualizing the data. It is achieved by plotting the first row (or column as the matrix is symmetric) against genomic distance and shown in Figure~\ref{figaverage} 
 
 <<figaverage,fig=TRUE,width=7,height=7>>=
-plot(den$x1, m[1,], type ="l", log="y")
+plot(den$x1, sqrt(m[1,]), type ="l")
 @ 
 \myfig{figaverage}{0.75\textwidth}{%
   Average number of interactions within chromosome 14 ploted against the genomic distance between the fragments.}
+
+\begin{itemize}
+\item Do you have an idea why it makes sense to plot the square root of average interactions against genomic distance between to loci? Hint: Think about where points lie in three dimensions at a given distance r.
+\end{itemize}
 
 With the calculated matrix of average interactions we can normalize our data by dividing the two matrices and plot the result.
 %
@@ -210,7 +213,7 @@ pc2Vec = Rle(values  = princp$loadings[,2],
 %---------------------------------------------------------
 \section{Comparison with chromatin state data}
 %---------------------------------------------------------
-We would like to explore the pattern we found in the previous section in the context of chromatin state data. For this we use data that were produced in the Encode project \cite{}. How these data were obtainted and formated is described in Section \ref{sec:obtain}.
+We would like to explore the pattern we found in the previous section in the context of chromatin state data. For this we use data that were produced in the Encode project \cite{ENCODE2004}. How these data were obtainted and formated is described in Section \ref{sec:obtain}.
 
 The data files contain the the following information about ChIP-seq peaks found for chromosome 14:
 \begin{center}
@@ -232,7 +235,6 @@ createRleVector = function(tab){
 
 The Chip-seq data can be loaded from the package and the function can be applied directly.
 
-\fixme{Change the name of the data.frames in ChipSeqData??}
 <<read,cache=TRUE>>=
 data("ChipSeqData")
 H3K27me3 = createRleVector(H3K27me3.df)
@@ -249,7 +251,7 @@ length(DNAse2)
 DNAse = DNAse1[seq(along=DNAse2)] + DNAse2
 @
 
-For plotting the first eigenvector against the ChIP-seq data, we have to make sure that we use the same scale for all plots. Therefore we define a plotting function that covers the same genomic range by setting a fixed $x$-axis range \Robject{xlim}. We also want to plot them on top of each other in one plot and do this by setting \Robject{par} accordingly.
+For plotting the first eigenvector against the ChIP-seq data, we have to make sure that we use the same scale for all plots. Therefore we define a plotting function that covers the same genomic range by setting a fixed $x$-axis range \Robject{xlim}. We also want to plot them on top of each other in one plot and do this by setting \Robject{par} accordingly. The result is shown in Figure~\ref{figrle}
 
 <<plotRle>>=
 plotRle = function(RleVector, ...){
@@ -265,7 +267,6 @@ plotRle(H3K27me3)
 plotRle(H3K36me3)
 plotRle(DNAse1)
 @
-\fixme{How to restore par after plotting?}
 
 \myfig{figrle}{0.9\textwidth}{%
   Plots of \Robject{pc1Vec}, \Robject{H3K27me3}, \Robject{H3K36me3},
@@ -345,21 +346,21 @@ save(HiC_GM_chr14,
      file=file.path(outputDir, "HiC_GM_chr14.RData"))
 @
 
-For comparison with the cromatin state we use Chip-seq data produced within the ENCODE project. It was downloaded from these URLs.
+For comparison with the cromatin state we use Chip-seq data produced within the ENCODE project~\cite{ENCODE2004}. It was downloaded from these URLs.
 
 \begin{lstlisting}
-$ wget urls
-$ wget
-$ wget
-$ wget
+$ wget http://hgdownload.cse.ucsc.edu/goldenPath/hg18/encodeDCC/wgEncodeBroadHistone/wgEncodeBroadHistoneGm12878H3k27me3StdPk.broadPeak.gz
+$ wget http://hgdownload.cse.ucsc.edu/goldenPath/hg18/encodeDCC/wgEncodeBroadHistone/wgEncodeBroadHistoneGm12878H3k36me3StdPk.broadPeak.gz
+$ wget http://hgdownload.cse.ucsc.edu/goldenPath/hg18/encodeDCC/wgEncodeUwDnaseSeq/wgEncodeUwDnaseSeqHotspotsRep1Gm06990.broadPeak.gz
+$ wget http://hgdownload.cse.ucsc.edu/goldenPath/hg18/encodeDCC/wgEncodeUwDnaseSeq/wgEncodeUwDnaseSeqHotspotsRep2Gm06990.broadPeak.gz
 \end{lstlisting}
 
 These files are read into data.frames and saved.
 <<ChIPfiles, eval=FALSE>>=
-files = c("wgEncodeBroadHistoneGm12878H3K27me3StdPk.broadPeak.gz", 
-    "wgEncodeBroadHistoneGm12878H3K36me3StdPk.broadPeak.gz",
-    "wgEncodeUwDnaseGm06990HotspotsRep1.broadPeak.gz",
-    "wgEncodeUwDnaseGm06990HotspotsRep2.broadPeak.gz")
+files = c("wgEncodeBroadChipSeqPeaksGm12878H3k27me3.broadPeak.gz", 
+    "wgEncodeBroadChipSeqPeaksGm12878H3k36me3.broadPeak.gz",
+    "wgEncodeUwDnaseSeqHotspotsRep1Gm06990.broadPeak.gz",
+    "wgEncodeUwDnaseSeqHotspotsRep2Gm06990.broadPeak.gz")
 @
 
 <<readtable, eval=FALSE>>=
@@ -382,16 +383,14 @@ DNAse2.df = cs[[4]]
 save(list=c("H3K27me3.df", "H3K36me3.df", "DNAse1.df", "DNAse2.df"), file=file.path(outputDir, "ChipSeqData.RData"))
 @
 
+\newpage
 %--------------------------------------------------
-%\section{SessionInfo}\label{sec:sessionInfo}
+\section{SessionInfo}\label{sec:sessionInfo}
 %--------------------------------------------------
 
-\begin{minipage}{\textwidth}
 <<sessionInfo, results=tex, print=TRUE>>=
 toLatex(sessionInfo())
 @ 
-\end{minipage}
-\caption{\label{tab:sessioninfo}%
 The output of \Rfunction{sessionInfo} on the build system 
 after running this vignette.}
 
