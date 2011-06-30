@@ -100,12 +100,13 @@ dev.off()
 Scatterplot of fragment position 1 against 2 for the HiC read pairs for which both ends map to chromosome 14.
 }
 
-To create a matrix of intrachromosomal locus--locus interaction frequencies, let us smooth the data using the \Rfunctions{bkde2D} function of the \Rpackage{KernSmooth} package.
+To create a matrix of intrachromosomal locus--locus interaction frequencies, let us smooth the data using the \Rfunction{bkde2D} function of the \Rpackage{KernSmooth} package.
 
 <<smooth, cache=TRUE, results=hide>>=
 chrlen = max(pos)
-gridsize = ceiling(chrlen/3e5)
-den = bkde2D( pos, bandwidth=c(1,1)*3e5, gridsize=c(1,1)*gridsize)
+gridsize = ceiling(chrlen/2e5)
+bandwidth = 3e5
+den = bkde2D( pos, bandwidth=c(1,1)*bandwidth, gridsize=c(1,1)*gridsize)
 @ 
 
 Since the the labeling of the reads within a pair as 1 or 2 is arbitrary, and pairwise interaction is a symmetric concept, we symmetrize the matrix by adding the transpose.
@@ -149,13 +150,17 @@ image(x=den$x1, y=den$x2, z=m^0.3,
 Plotting the avarage number of interactions against the genomic distance is a better way of visualizing the data. It is achieved by plotting the first row (or column as the matrix is symmetric) against genomic distance and shown in Figure~\ref{figaverage} 
 
 <<figaverage,fig=TRUE,width=7,height=7>>=
-plot(den$x1, sqrt(m[1,]), type ="l")
+genomicDistance = den$x1 - min(den$x1)
+averageInteractions = m[1,]
+plot(genomicDistance, sqrt(averageInteractions), type ="l")
 @ 
 \myfig{figaverage}{0.75\textwidth}{%
   Average number of interactions within chromosome 14 ploted against the genomic distance between the fragments.}
 
 \begin{itemize}
-\item Do you have an idea why it makes sense to plot the square root of average interactions against genomic distance between to loci? Hint: Think about where points lie in three dimensions at a given distance r.
+\item How can the steep drop be explained?
+\item What could be an explanation for the bump at the right end of the curve?
+\item Why might it make sense to plot the square root of average interactions against genomic distance between to loci? Hint: Think about where points lie in three dimensions at a given distance r from a point of origin p.
 \end{itemize}
 
 With the calculated matrix of average interactions we can normalize our data by dividing the two matrices and plot the result.
@@ -227,7 +232,9 @@ createRleVector = function(tab){
   for(i in 1:nrow(tab)){
     RleVec = RleVec + 
       Rle(values  = c(0,              tab$signalValue[i],         0),
-          lengths = c(tab$start[i]-1, tab$end[i]-tab$start[i]+1,  length(RleVec)-tab$end[i]))
+          lengths = c(tab$start[i]-1,
+                    tab$end[i]-tab$start[i]+1,  
+                    length(RleVec)-tab$end[i]))
   }
   RleVec
 }
@@ -248,7 +255,7 @@ To combine the two DNAse1 replicates we have to make sure that the vectors have 
 <<combinednase>>=
 length(DNAse1)
 length(DNAse2)
-DNAse = DNAse1[seq(along=DNAse2)] + DNAse2
+DNAse = DNAse1 + DNAse2[seq(along=DNAse1)]
 @
 
 For plotting the first eigenvector against the ChIP-seq data, we have to make sure that we use the same scale for all plots. Therefore we define a plotting function that covers the same genomic range by setting a fixed $x$-axis range \Robject{xlim}. We also want to plot them on top of each other in one plot and do this by setting \Robject{par} accordingly. The result is shown in Figure~\ref{figrle}
@@ -291,7 +298,7 @@ cor(DNAse[x], pc1Vec[x])
 As you see, the correlation coefficents are less convincing than the visual impression, especially for DNAse1. 
 \begin{itemize}
 \item Discuss this topic. Repeat the last steps for the second eigenvector of the principal component analysis.
-\item Which other analyses or annotations could one do now?
+\item Which other analyses or annotations could be done now to put the spacial proximity into a functional context?
 \end{itemize}
 
 
@@ -299,9 +306,11 @@ As you see, the correlation coefficents are less convincing than the visual impr
 \section{Obtaining the data}\label{sec:obtain}
 %--------------------------------------------------
   
-The data associated with the article~\cite{LiebermanAiden2009} is available from NCBI Gene Expression Omnibus under the accession GSE18199. From this record, we downloaded the supplementary file GSE18199\_RAW.tar and extracted its content.
+The data associated with the article~\cite{LiebermanAiden2009} is available from NCBI Gene Expression Omnibus under the accession GSE18199. From this record, we downloaded the supplementary file 
+\newline GSE18199\_RAW.tar and extracted its content.
 \begin{lstlisting}
-$ wget ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/series/GSE18199/GSE18199_RAW.tar
+$ wget ftp://ftp.ncbi.nih.gov/pub/geo/DATA/supplementary/series/
+GSE18199/GSE18199_RAW.tar
 $ tar -xvf GSE18199_RAW.tar  
 \end{lstlisting}
 
@@ -349,10 +358,18 @@ save(HiC_GM_chr14,
 For comparison with the cromatin state we use Chip-seq data produced within the ENCODE project~\cite{ENCODE2004}. It was downloaded from these URLs.
 
 \begin{lstlisting}
-$ wget http://hgdownload.cse.ucsc.edu/goldenPath/hg18/encodeDCC/wgEncodeBroadHistone/wgEncodeBroadHistoneGm12878H3k27me3StdPk.broadPeak.gz
-$ wget http://hgdownload.cse.ucsc.edu/goldenPath/hg18/encodeDCC/wgEncodeBroadHistone/wgEncodeBroadHistoneGm12878H3k36me3StdPk.broadPeak.gz
-$ wget http://hgdownload.cse.ucsc.edu/goldenPath/hg18/encodeDCC/wgEncodeUwDnaseSeq/wgEncodeUwDnaseSeqHotspotsRep1Gm06990.broadPeak.gz
-$ wget http://hgdownload.cse.ucsc.edu/goldenPath/hg18/encodeDCC/wgEncodeUwDnaseSeq/wgEncodeUwDnaseSeqHotspotsRep2Gm06990.broadPeak.gz
+$ wget http://hgdownload.cse.ucsc.edu/goldenPath/
+hg18/encodeDCC/wgEncodeBroadHistone/
+wgEncodeBroadHistoneGm12878H3k27me3StdPk.broadPeak.gz
+$ wget http://hgdownload.cse.ucsc.edu/goldenPath/
+hg18/encodeDCC/wgEncodeBroadHistone/
+wgEncodeBroadHistoneGm12878H3k36me3StdPk.broadPeak.gz
+$ wget http://hgdownload.cse.ucsc.edu/goldenPath/
+hg18/encodeDCC/wgEncodeUwDnaseSeq/
+wgEncodeUwDnaseSeqHotspotsRep1Gm06990.broadPeak.gz
+$ wget http://hgdownload.cse.ucsc.edu/goldenPath/
+hg18/encodeDCC/wgEncodeUwDnaseSeq/
+wgEncodeUwDnaseSeqHotspotsRep2Gm06990.broadPeak.gz
 \end{lstlisting}
 
 These files are read into data.frames and saved.
@@ -383,7 +400,6 @@ DNAse2.df = cs[[4]]
 save(list=c("H3K27me3.df", "H3K36me3.df", "DNAse1.df", "DNAse2.df"), file=file.path(outputDir, "ChipSeqData.RData"))
 @
 
-\newpage
 %--------------------------------------------------
 \section{SessionInfo}\label{sec:sessionInfo}
 %--------------------------------------------------
@@ -392,7 +408,7 @@ save(list=c("H3K27me3.df", "H3K36me3.df", "DNAse1.df", "DNAse2.df"), file=file.p
 toLatex(sessionInfo())
 @ 
 The output of \Rfunction{sessionInfo} on the build system 
-after running this vignette.}
+after running this vignette.
 
 %--------------------------------------------------
 \bibliography{LiebermanAidenHiC2009}
