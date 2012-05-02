@@ -1,4 +1,4 @@
-%\VignetteIndexEntry{Exploration of HiC data}}
+%\VignetteIndexEntry{Exploration of HiC data}
 %\VignettePackage{LiebermanAidenHiC2009}
 
 % To compile this document
