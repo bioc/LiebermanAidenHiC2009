@@ -1,12 +1,12 @@
 Package: LiebermanAidenHiC2009
 Title: Selected data from the HiC paper of E. Lieberman-Aiden et al. in Science (2009)
-Version: 0.5.0
+Version: 0.5.1
 Author: Wolfgang Huber, Felix Klein
 Maintainer: Felix Klein <fklein@embl.de>
 Description: This package provides data that were presented in
   the article "Comprehensive mapping of long-range interactions reveals
   folding principles of the human genome", Science 2009 Oct 9;326(5950):289-93. PMID: 19815776
-biocViews: ExperimentData
+biocViews: ExperimentData, Genome, SequencingData, DNASeqData, ChIPSeqData, miRNAData, SmallRNAData, ChipOnChipData, GEO, NCI, ENCODE
 License: LGPL
 Depends: KernSmooth, IRanges
 Suggests: 
